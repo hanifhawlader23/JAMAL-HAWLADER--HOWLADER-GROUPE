@@ -1,3 +1,5 @@
+
+
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, ResponsiveContainer, ComposedChart, Area, ReferenceLine, Label, TooltipProps } from 'recharts';
@@ -57,8 +59,8 @@ const Dashboard = () => {
             return clientMatch && dateMatch;
         });
 
-        return relevantEntries.reduce((total, entry) => {
-            const entryTotal = entry.items.reduce((entrySum, item) => {
+        return relevantEntries.reduce((total: number, entry: Entry) => {
+            const entryTotal = entry.items.reduce((entrySum: number, item: EntryItem) => {
                 const product = products.find(p => p.id === item.productId);
                 const price = product ? Number(product.price) : 0;
                 const itemQty = Object.values(item.sizeQuantities).reduce((qSum: number, q: number) => qSum + (Number(q) || 0), 0);
@@ -69,7 +71,7 @@ const Dashboard = () => {
     }, [entries, products, clientFilter, dateRange]);
 
 
-    const getTotalUnits = (items: (EntryItem | DeliveryItem)[]): number => items.reduce((sum: number, item) => sum + Object.values(item.sizeQuantities).reduce((qSum: number, q: number) => qSum + (Number(q) || 0), 0), 0);
+    const getTotalUnits = (items: (EntryItem | DeliveryItem)[]): number => items.reduce((sum: number, item) => sum + Object.values(item.sizeQuantities).reduce((qSum: number, q: number) => qSum + (q || 0), 0), 0);
 
     const { filteredEntries, filteredDeliveries } = filteredData;
     
@@ -107,7 +109,7 @@ const Dashboard = () => {
     const productPerformanceData = products.map(product => {
         const deliveredCount = deliveries.flatMap(del => del.items)
             .filter((item): item is DeliveryItem => item.productId === product.id)
-            .reduce((sum, item) => sum + Object.values(item.sizeQuantities).reduce((qSum: number, q: number) => qSum + (Number(q) || 0), 0), 0);
+            .reduce((sum: number, item: DeliveryItem) => sum + Object.values(item.sizeQuantities).reduce((qSum: number, q: number) => qSum + (Number(q) || 0), 0), 0);
         return { name: product.modelName, 'Units Delivered': deliveredCount };
     }).filter(p => p['Units Delivered'] > 0);
 
@@ -236,7 +238,7 @@ const ClientPerformanceChart = ({ data, setModalInfo }: { data: { filteredEntrie
 
         filteredEntries.forEach(entry => {
             const client = clientMap.get(entry.clientId);
-            if(client) client.recibida += entry.items.reduce((sum: number, item) => sum + Object.values(item.sizeQuantities).reduce((a: number, b: number) => a + (Number(b) || 0), 0), 0);
+            if(client) client.recibida += entry.items.reduce((sum: number, item: EntryItem) => sum + Object.values(item.sizeQuantities).reduce((a: number, b: number) => a + (Number(b) || 0), 0), 0);
         });
 
         filteredDeliveries.forEach(delivery => {
@@ -352,14 +354,14 @@ const DeliveryTimeline = ({ data, timeUnit, setTimeUnit }: {data: { filteredEntr
         filteredEntries.forEach((entry: Entry) => {
             const key = getPeriodKey(new Date(entry.date), timeUnit);
             const period = periodMap.get(key) || { recibida: 0, entregada: 0 };
-            period.recibida += entry.items.reduce((sum: number, item) => sum + Object.values(item.sizeQuantities).reduce((a: number, b: number) => a + (Number(b) || 0), 0), 0);
+            period.recibida += entry.items.reduce((sum: number, item: EntryItem) => sum + Object.values(item.sizeQuantities).reduce((a: number, b: number) => a + (Number(b) || 0), 0), 0);
             periodMap.set(key, period);
         });
 
         filteredDeliveries.forEach((delivery: Delivery) => {
             const key = getPeriodKey(new Date(delivery.deliveryDate), timeUnit);
             const period = periodMap.get(key) || { recibida: 0, entregada: 0 };
-            period.entregada += delivery.items.reduce((sum: number, item) => sum + Object.values(item.sizeQuantities).reduce((a: number, b: number) => a + (Number(b) || 0), 0), 0);
+            period.entregada += delivery.items.reduce((sum: number, item: DeliveryItem) => sum + Object.values(item.sizeQuantities).reduce((a: number, b: number) => a + (Number(b) || 0), 0), 0);
             periodMap.set(key, period);
         });
 
@@ -445,7 +447,7 @@ const BottleneckHeatmap = ({ data, mode, setMode, setModalInfo }: {data: { filte
         rows.forEach(r => matrix[r] = {});
 
         if (mode === 'Client') {
-            const faltaByClient = new Map();
+            const faltaByClient = new Map<string, number>();
             filteredEntries.forEach((entry: Entry) => {
                 entry.items.forEach(item => {
                     const falta = faltaByItem.get(item.id) || 0;

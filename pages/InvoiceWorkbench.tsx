@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo } from 'react';
 import { useData } from '../hooks/useData';
 import { EntryStatus, PaymentStatus, DocumentItem, Surcharge, Document, DeliveryItem, Entry } from '../types';
@@ -93,8 +95,8 @@ const InvoiceWorkbench = () => {
 
         const docItems: DocumentItem[] = [];
         const surcharges: Surcharge[] = [];
-        let specialClientSurchargeBase = 0;
-        let dynamicSurchargeBase = 0;
+        let specialClientSurchargeBase: number = 0;
+        let dynamicSurchargeBase: number = 0;
 
         entriesToInvoice.forEach(entry => {
             const entryDeliveries = deliveries.filter(d => d.entryCode === entry.code);
@@ -102,10 +104,10 @@ const InvoiceWorkbench = () => {
                 const product = products.find(p => p.id === item.productId);
                 if (!product || Number(product.price) === 0) return;
 
-                const orderedQty = Object.values(item.sizeQuantities).reduce((sum: number, q: number) => sum + (q || 0), 0);
+                const orderedQty = Object.values(item.sizeQuantities).reduce((sum: number, q: number) => sum + (Number(q) || 0), 0);
                 
                 const deliveriesForItem = entryDeliveries.flatMap(d => d.items).filter(dItem => dItem.entryItemId === item.id);
-                const deliveredQty = deliveriesForItem.reduce((sum: number, dItem) => sum + Object.values(dItem.sizeQuantities).reduce((qSum: number, q: number) => qSum + (Number(q) || 0), 0), 0);
+                const deliveredQty = deliveriesForItem.reduce((sum: number, dItem: DeliveryItem) => sum + Object.values(dItem.sizeQuantities).reduce((qSum: number, q: number) => qSum + (q || 0), 0), 0);
 
                 if (deliveredQty <= 0) return;
 
@@ -114,8 +116,8 @@ const InvoiceWorkbench = () => {
                 const allDeliveryDatesForEntry = entryDeliveries.map(d => new Date(d.deliveryDate).getTime());
                 const lastDeliveryDate = allDeliveryDatesForEntry.length > 0 ? new Date(Math.max(...allDeliveryDatesForEntry)).toISOString() : undefined;
 
-                const unitPrice = Number(product.price);
-                const total = deliveredQty * unitPrice;
+                const unitPrice: number = Number(product.price);
+                const total: number = Number(deliveredQty) * unitPrice;
                 
                  // Check for surcharges but DON'T change the unit price
                 if (isSpecialClient && deliveredQty > 0 && deliveredQty <= 20) {
@@ -166,11 +168,11 @@ const InvoiceWorkbench = () => {
         }
 
 
-        const subtotal = docItems.reduce((sum: number, item) => sum + item.total, 0);
-        const totalSurcharges = surcharges.reduce((sum: number, s) => sum + s.amount, 0);
-        const taxRate = 21.00; // Example tax rate
-        const taxAmount = (subtotal + totalSurcharges) * (taxRate / 100);
-        const total = subtotal + totalSurcharges + taxAmount;
+        const subtotal: number = docItems.reduce((sum: number, item: DocumentItem) => sum + item.total, 0);
+        const totalSurcharges: number = surcharges.reduce((sum: number, s: Surcharge) => sum + s.amount, 0);
+        const taxRate: number = 21.00; // Example tax rate
+        const taxAmount: number = (subtotal + totalSurcharges) * (taxRate / 100);
+        const total: number = subtotal + totalSurcharges + taxAmount;
 
         const newDocument: Document = {
             id: 'temp-' + Date.now(), // Temporary ID for preview
