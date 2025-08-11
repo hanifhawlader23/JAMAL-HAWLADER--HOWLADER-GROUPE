@@ -2,7 +2,7 @@
 
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { db } from '../firebase'; // Using Firebase now
-import { collection, onSnapshot, doc, addDoc, setDoc, deleteDoc, DocumentData } from 'firebase-firestore';
+import { collection, onSnapshot, doc, addDoc, setDoc, deleteDoc, DocumentData } from 'firebase/firestore';
 import { getInitialCompanyDetails } from '../lib/initialData';
 import { CompanyDetails, User, Client, Product, Entry, Delivery, Document } from '../types';
 
@@ -50,7 +50,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribes = collectionsToLoad.map(({ name, setter }) => {
       return onSnapshot(collection(db, name), (querySnapshot) => {
         const data = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        setter(data);
+        setter(data as any);
         setLoadingStatus(prev => ({ ...prev, [name]: false }));
       }, (error) => {
           console.error(`Error loading collection ${name}:`, error);
@@ -100,7 +100,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const addDocument = async (documentData: Omit<Document, 'id'>) => {
     const newDocRef = await addDoc(collection(db, 'documents'), documentData);
-    return { id: newDocRef.id, ...documentData };
+    return { id: newDocRef.id, ...documentData } as Document;
   };
   const updateDocument = async (id: string, updates: Partial<Document>) => { await setDoc(doc(db, 'documents', id), updates, { merge: true }); };
   const deleteDocument = async (id: string) => { await deleteDoc(doc(db, 'documents', id)); };

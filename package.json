@@ -8,9 +8,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google/genai": "^0.14.2"
+    "@google/genai": "^0.14.2",
+    "firebase": "^10.12.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.24.1",
+    "recharts": "^2.12.7"
   },
   "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "vite": "^5.3.4"
   }

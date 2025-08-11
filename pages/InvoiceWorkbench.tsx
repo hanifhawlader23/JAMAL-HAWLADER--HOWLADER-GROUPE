@@ -1,7 +1,8 @@
 
+
 import React, { useState, useMemo } from 'react';
 import { useData } from '../hooks/useData';
-import { EntryStatus, PaymentStatus, DocumentItem, Surcharge, Document, DeliveryItem } from '../types';
+import { EntryStatus, PaymentStatus, DocumentItem, Surcharge, Document, DeliveryItem, Entry } from '../types';
 import { formatDate } from '../lib/helpers';
 import Modal from '../components/Modal';
 import PrintableInvoice from '../components/PrintableInvoice';
@@ -23,7 +24,7 @@ const InvoiceWorkbench = () => {
 
 
     const availableEntries = useMemo(() => {
-        return entries.filter(entry =>
+        return entries.filter((entry: Entry) =>
             (entry.status === EntryStatus.DELIVERED || entry.status === EntryStatus.PRE_INVOICED) && !entry.invoiceId
         );
     }, [entries]);
@@ -31,17 +32,17 @@ const InvoiceWorkbench = () => {
     const filteredEntries = useMemo(() => {
         let result = availableEntries;
         if (selectedClient) {
-            result = result.filter(entry => entry.clientId === selectedClient);
+            result = result.filter((entry: Entry) => entry.clientId === selectedClient);
         }
         if (startDate) {
             const start = new Date(startDate);
             start.setHours(0, 0, 0, 0);
-            result = result.filter(entry => new Date(entry.date) >= start);
+            result = result.filter((entry: Entry) => new Date(entry.date) >= start);
         }
         if (endDate) {
             const end = new Date(endDate);
             end.setHours(23, 59, 59, 999);
-            result = result.filter(entry => new Date(entry.date) <= end);
+            result = result.filter((entry: Entry) => new Date(entry.date) <= end);
         }
         return result;
     }, [availableEntries, selectedClient, startDate, endDate]);
@@ -103,10 +104,10 @@ const InvoiceWorkbench = () => {
                 const product = products.find(p => p.id === item.productId);
                 if (!product || product.price === 0) return;
 
-                const orderedQty = Object.values(item.sizeQuantities).reduce((sum: number, q: number) => sum + (q || 0), 0);
+                const orderedQty = Object.values(item.sizeQuantities).reduce((sum, q) => sum + q, 0);
                 
                 const deliveriesForItem = entryDeliveries.flatMap(d => d.items).filter(dItem => dItem.entryItemId === item.id);
-                const deliveredQty = deliveriesForItem.reduce((sum: number, dItem: DeliveryItem) => sum + Object.values(dItem.sizeQuantities).reduce((qSum: number, q: number) => qSum + (q || 0), 0), 0);
+                const deliveredQty = deliveriesForItem.reduce((sum, dItem) => sum + Object.values(dItem.sizeQuantities).reduce((qSum, q) => qSum + q, 0), 0);
 
                 if (deliveredQty <= 0) return;
 
