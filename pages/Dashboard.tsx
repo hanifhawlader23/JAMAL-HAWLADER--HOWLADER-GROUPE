@@ -1,9 +1,3 @@
-
-
-
-
-
-
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, ResponsiveContainer, ComposedChart, Area, ReferenceLine, Label, TooltipProps } from 'recharts';
@@ -75,7 +69,7 @@ const Dashboard = () => {
     }, [entries, products, clientFilter, dateRange]);
 
 
-    const getTotalUnits = (items: (EntryItem | DeliveryItem)[]) => items.reduce((sum: number, item) => sum + Object.values(item.sizeQuantities).reduce((qSum: number, q: number) => qSum + (Number(q) || 0), 0), 0);
+    const getTotalUnits = (items: (EntryItem | DeliveryItem)[]): number => items.reduce((sum: number, item) => sum + Object.values(item.sizeQuantities).reduce((qSum: number, q: number) => qSum + (Number(q) || 0), 0), 0);
 
     const { filteredEntries, filteredDeliveries } = filteredData;
     

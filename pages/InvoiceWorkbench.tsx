@@ -1,9 +1,3 @@
-
-
-
-
-
-
 import React, { useState, useMemo } from 'react';
 import { useData } from '../hooks/useData';
 import { EntryStatus, PaymentStatus, DocumentItem, Surcharge, Document, DeliveryItem, Entry } from '../types';
@@ -111,7 +105,7 @@ const InvoiceWorkbench = () => {
                 const orderedQty = Object.values(item.sizeQuantities).reduce((sum: number, q: number) => sum + (q || 0), 0);
                 
                 const deliveriesForItem = entryDeliveries.flatMap(d => d.items).filter(dItem => dItem.entryItemId === item.id);
-                const deliveredQty = deliveriesForItem.reduce((sum: number, dItem) => sum + Object.values(dItem.sizeQuantities).reduce((qSum: number, q: number) => qSum + (q || 0), 0), 0);
+                const deliveredQty = deliveriesForItem.reduce((sum: number, dItem) => sum + Object.values(dItem.sizeQuantities).reduce((qSum: number, q: number) => qSum + (Number(q) || 0), 0), 0);
 
                 if (deliveredQty <= 0) return;
 
