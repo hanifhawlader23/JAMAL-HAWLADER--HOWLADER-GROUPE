@@ -1,0 +1,8 @@
+{
+  "name": "Textile Management System",
+  "description": "A web application for a textile manufacturing company to manage entries, deliveries, inventory, and invoicing. It will provide a dashboard, reporting, and user management features.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "prompt": ""
+}
