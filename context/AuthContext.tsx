@@ -1,4 +1,5 @@
 
+
 import React, { createContext, useState, ReactNode, useCallback } from 'react';
 import useLocalStorage from '../hooks/useLocalStorage';
 import { useData } from '../hooks/useData';
@@ -11,7 +12,7 @@ interface AuthContextType {
   logout: () => void;
   loginWithBiometrics: () => Promise<boolean>;
   registerBiometrics: () => Promise<{success: boolean, message: string}>;
-  signup: (fullName: string, username: string, password: string) => { success: boolean; message: string; };
+  signup: (fullName: string, username: string, password: string) => Promise<{ success: boolean; message: string; }>;
   signupWithBiometrics: () => Promise<{ success: boolean; message: string; }>;
   isAuthenticated: boolean;
   hasRole: (roles: Role[]) => boolean;
@@ -46,7 +47,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setViewAsRole(null); // Clear view role on logout
   }, [setCurrentUser, setViewAsRole]);
 
-  const signup = (fullName: string, username: string, password: string): { success: boolean, message: string } => {
+  const signup = async (fullName: string, username: string, password: string): Promise<{ success: boolean; message: string; }> => {
     const userExists = users.some(u => u.username.toLowerCase() === username.toLowerCase());
     if (userExists) {
         return { success: false, message: 'A user with this email already exists.' };
@@ -57,12 +58,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         password,
         role: Role.USER, // Default role
     };
-    addUser(newUser);
     
-    // Automatically log in the new user
-    login(username, password);
-    
-    return { success: true, message: 'Signup successful!' };
+    try {
+        const docRef = await addUser(newUser);
+        
+        // Manually create the user object for immediate login, without the password
+        const userForState: User = {
+            id: docRef.id,
+            fullName,
+            username,
+            role: Role.USER,
+        };
+        
+        // Set the new user as the current user
+        setCurrentUser(userForState);
+        setViewAsRole(null);
+        
+        return { success: true, message: 'Signup successful!' };
+    } catch (error) {
+        console.error("Error signing up:", error);
+        return { success: false, message: "Failed to create account. Please try again." };
+    }
   };
 
   const signupWithBiometrics = async (): Promise<{ success: boolean, message: string }> => {

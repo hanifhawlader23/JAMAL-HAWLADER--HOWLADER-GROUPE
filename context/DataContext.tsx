@@ -80,7 +80,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   // --- Firestore Data Manipulation Functions ---
 
-  const addUser = async (user: Omit<User, 'id'>) => { await addDoc(collection(db, 'users'), user); };
+  const addUser = async (user: Omit<User, 'id'>) => {
+    return await addDoc(collection(db, 'users'), user);
+  };
   const updateUser = async (id: string, updates: Partial<User>) => { await setDoc(doc(db, 'users', id), updates, { merge: true }); };
   const deleteUser = async (id: string) => { await deleteDoc(doc(db, 'users', id)); };
   

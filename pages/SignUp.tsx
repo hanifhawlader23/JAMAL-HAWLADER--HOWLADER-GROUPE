@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -12,10 +13,10 @@ const SignUp: React.FC = () => {
   const { signup, signupWithBiometrics } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const result = signup(fullName, username, password);
+    const result = await signup(fullName, username, password);
     if (result.success) {
       navigate('/');
     } else {
