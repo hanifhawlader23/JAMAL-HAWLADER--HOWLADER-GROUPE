@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useMemo } from 'react';
 import { useData } from '../hooks/useData';
 import { EntryStatus, PaymentStatus, DocumentItem, Surcharge, Document, DeliveryItem, Entry } from '../types';
@@ -104,10 +105,10 @@ const InvoiceWorkbench = () => {
                 const product = products.find(p => p.id === item.productId);
                 if (!product || product.price === 0) return;
 
-                const orderedQty = Object.values(item.sizeQuantities).reduce((sum, q) => sum + q, 0);
+                const orderedQty = Object.values(item.sizeQuantities).reduce((sum: number, q: number) => sum + (q || 0), 0);
                 
                 const deliveriesForItem = entryDeliveries.flatMap(d => d.items).filter(dItem => dItem.entryItemId === item.id);
-                const deliveredQty = deliveriesForItem.reduce((sum, dItem) => sum + Object.values(dItem.sizeQuantities).reduce((qSum, q) => qSum + q, 0), 0);
+                const deliveredQty = deliveriesForItem.reduce((sum: number, dItem) => sum + Object.values(dItem.sizeQuantities).reduce((qSum: number, q: number) => qSum + (q || 0), 0), 0);
 
                 if (deliveredQty <= 0) return;
 
@@ -168,8 +169,8 @@ const InvoiceWorkbench = () => {
         }
 
 
-        const subtotal = docItems.reduce((sum, item) => sum + item.total, 0);
-        const totalSurcharges = surcharges.reduce((sum, s) => sum + s.amount, 0);
+        const subtotal = docItems.reduce((sum: number, item) => sum + item.total, 0);
+        const totalSurcharges = surcharges.reduce((sum: number, s) => sum + s.amount, 0);
         const taxRate = 21.00; // Example tax rate
         const taxAmount = (subtotal + totalSurcharges) * (taxRate / 100);
         const total = subtotal + totalSurcharges + taxAmount;
