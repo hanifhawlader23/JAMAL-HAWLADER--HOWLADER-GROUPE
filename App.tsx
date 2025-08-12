@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AppLoadingScreen } from './context/DataContext';
+import { AppLoadingScreen, ConnectionErrorScreen } from './context/DataContext';
 import { useAuth } from './hooks/useAuth';
 import { useData } from './hooks/useData';
 import Sidebar from './components/Sidebar';
@@ -21,9 +22,13 @@ import SignUp from './pages/SignUp';
 import AiAssistant from './components/AiAssistant';
 
 const App = () => {
-  const { isAppLoading } = useData();
+  const { isAppLoading, connectionError } = useData();
   const { isAuthenticated, hasRole } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  if (connectionError) {
+    return <ConnectionErrorScreen error={connectionError} />;
+  }
 
   if (isAppLoading) {
     return <AppLoadingScreen />;

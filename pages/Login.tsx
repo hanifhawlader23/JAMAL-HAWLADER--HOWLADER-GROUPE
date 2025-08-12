@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -13,18 +14,21 @@ const Login = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
-    if (login(username, password)) {
+    const result = login(username, password);
+    if (result.success) {
       navigate('/');
     } else {
-      setError('Invalid email or password.');
+      setError(result.message);
     }
   };
 
   const handleBiometricLogin = async () => {
     setError('');
-    const success = await loginWithBiometrics();
-    if (success) {
+    const result = await loginWithBiometrics();
+    if (result.success) {
       navigate('/');
+    } else {
+      setError(result.message);
     }
   };
 
@@ -46,7 +50,7 @@ const Login = () => {
       <div className="max-w-md w-full bg-[var(--component-bg)] p-8 rounded-2xl shadow-2xl shadow-black/30">
         <h2 className="text-4xl font-bold text-center text-[var(--text-accent)] mb-2 font-stylish tracking-widest">HAWLDER</h2>
         <p className="text-center text-[var(--text-secondary)] mb-8">Welcome! Login to your account</p>
-        {error && <p className="bg-red-500/20 text-red-300 p-3 rounded-md mb-4 text-center">{error}</p>}
+        {error && <p className="bg-red-500/20 text-red-300 p-3 rounded-md mb-4 text-center text-sm">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-[var(--text-secondary)] text-sm font-bold mb-2" htmlFor="username">

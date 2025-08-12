@@ -1,5 +1,6 @@
 
 
+
 import React, { createContext, useState, ReactNode, useCallback } from 'react';
 import useLocalStorage from '../hooks/useLocalStorage';
 import { useData } from '../hooks/useData';
@@ -8,9 +9,9 @@ import { useToast } from '../hooks/useToast';
 
 interface AuthContextType {
   currentUser: User | null;
-  login: (username: string, password: string) => boolean;
+  login: (username: string, password: string) => { success: boolean; message: string; };
   logout: () => void;
-  loginWithBiometrics: () => Promise<boolean>;
+  loginWithBiometrics: () => Promise<{ success: boolean; message: string; }>;
   registerBiometrics: () => Promise<{success: boolean, message: string}>;
   signup: (fullName: string, username: string, password: string) => Promise<{ success: boolean; message: string; }>;
   signupWithBiometrics: () => Promise<{ success: boolean; message: string; }>;
@@ -28,7 +29,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [viewAsRole, setViewAsRole] = useLocalStorage<Role | null>('viewAsRole', null);
   const toast = useToast();
 
-  const login = useCallback((username: string, password: string): boolean => {
+  const login = useCallback((username: string, password: string): { success: boolean; message: string; } => {
     const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
     if (user) {
       // Omit password before storing in state/localStorage
@@ -37,9 +38,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if(user.role !== Role.ADMIN) {
         setViewAsRole(null); // Reset view role if logging in as non-admin
       }
-      return true;
+      return { success: true, message: "Login successful!" };
     }
-    return false;
+    return { success: false, message: 'Invalid email or password.' };
   }, [users, setCurrentUser, setViewAsRole]);
   
   const logout = useCallback(() => {
@@ -137,12 +138,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
 
-  const loginWithBiometrics = async (): Promise<boolean> => {
+  const loginWithBiometrics = async (): Promise<{ success: boolean; message: string; }> => {
       try {
           const hasRegisteredKeys = Object.keys(localStorage).some(k => k.startsWith('biometric_credential_id_for_'));
           if (!hasRegisteredKeys) {
-              toast.addToast("No biometric credentials registered on this device.", 'warning');
-              return false;
+              const msg = "No biometric credentials registered on this device.";
+              toast.addToast(msg, 'warning');
+              return { success: false, message: msg };
           }
 
           const challenge = new Uint8Array(32);
@@ -171,19 +173,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                   if (userToLogin) {
                       // We still use the password-based login as the final step
                       // since our app's session management is tied to it.
-                      return login(userToLogin.username, userToLogin.password || '');
+                      const loginResult = login(userToLogin.username, userToLogin.password || '');
+                      if (loginResult.success) {
+                        toast.addToast(loginResult.message, 'success');
+                      } else {
+                        toast.addToast(loginResult.message, 'error');
+                      }
+                      return loginResult;
                   }
               }
           }
-          toast.addToast("Biometric verification failed. Could not find a matching user.", 'error');
-          return false;
+          const failMessage = "Biometric verification failed. Could not find a matching user.";
+          toast.addToast(failMessage, 'error');
+          return { success: false, message: failMessage };
       } catch (err: any) {
           console.error('Biometric login error:', err);
+          const failMessage = `Biometric login failed: ${err.message}`;
           // Don't alert for user cancellations (e.g. "The operation was aborted")
           if (err.name !== 'NotAllowedError') {
-             toast.addToast(`Biometric login failed: ${err.message}`, 'error');
+             toast.addToast(failMessage, 'error');
           }
-          return false;
+          return { success: false, message: failMessage };
       }
   };
 

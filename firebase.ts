@@ -1,23 +1,37 @@
 
 import { initializeApp } from "firebase/app";
-import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
+import { initializeFirestore, enableIndexedDbPersistence } from "firebase/firestore";
 
-// User's actual Firebase configuration has been placed here.
+// Securely load Firebase config from environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyAT_qLqwbSdMkhEs38fIZFFQNOz7eXeQkg",
-  authDomain: "hawlader-d868a.firebaseapp.com",
-  projectId: "hawlader-d868a",
-  storageBucket: "hawlader-d868a.firebasestorage.app",
-  messagingSenderId: "95207054125",
-  appId: "1:95207054125:web:e2f965b739dabecdeb51a4",
-  measurementId: "G-GD1ZSFB4P0"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
+
+// A crucial check to ensure the app doesn't run without configuration.
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  throw new Error(
+    "Firebase configuration environment variables are not set. " +
+    "Please create a `.env` or `.env.local` file in your project root and add your VITE_FIREBASE_* variables, " +
+    "or set them in your deployment service's settings."
+  );
+}
+
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Cloud Firestore and get a reference to the service
-export const db = getFirestore(app);
+// Initialize Cloud Firestore with WebSocket fallback.
+// This helps prevent connection errors in environments that may block WebSockets.
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+});
+
 
 // Enable offline persistence to handle network issues gracefully
 enableIndexedDbPersistence(db)

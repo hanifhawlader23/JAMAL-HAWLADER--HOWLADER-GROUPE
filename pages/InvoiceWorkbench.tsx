@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useMemo } from 'react';
 import { useData } from '../hooks/useData';
 import { EntryStatus, PaymentStatus, DocumentItem, Surcharge, Document, DeliveryItem, Entry } from '../types';
@@ -95,19 +97,27 @@ const InvoiceWorkbench = () => {
 
         const docItems: DocumentItem[] = [];
         const surcharges: Surcharge[] = [];
-        let specialClientSurchargeBase: number = 0;
-        let dynamicSurchargeBase: number = 0;
+        let specialClientSurchargeBase = 0;
+        let dynamicSurchargeBase = 0;
 
         entriesToInvoice.forEach(entry => {
             const entryDeliveries = deliveries.filter(d => d.entryCode === entry.code);
             entry.items.forEach(item => {
                 const product = products.find(p => p.id === item.productId);
-                if (!product || Number(product.price) === 0) return;
+                
+                const priceValue = product ? product.price : 0;
+                if (!product || isNaN(Number(priceValue)) || Number(priceValue) === 0) return;
 
-                const orderedQty = Object.values(item.sizeQuantities).reduce((sum: number, q: number) => sum + (Number(q) || 0), 0);
+                const orderedQty = (item.sizeQuantities && typeof item.sizeQuantities === 'object') ? Object.values(item.sizeQuantities).reduce((sum: number, q: number): number => sum + (Number(q) || 0), 0) : 0;
                 
                 const deliveriesForItem = entryDeliveries.flatMap(d => d.items).filter(dItem => dItem.entryItemId === item.id);
-                const deliveredQty = deliveriesForItem.reduce((sum: number, dItem: DeliveryItem) => sum + Object.values(dItem.sizeQuantities).reduce((qSum: number, q: number) => qSum + (q || 0), 0), 0);
+                
+                const deliveredQty = deliveriesForItem.reduce((sum: number, dItem: DeliveryItem): number => {
+                    const itemQuantity = (dItem.sizeQuantities && typeof dItem.sizeQuantities === 'object')
+                        ? Object.values(dItem.sizeQuantities).reduce((qSum: number, q: number): number => qSum + (Number(q) || 0), 0)
+                        : 0;
+                    return sum + itemQuantity;
+                }, 0);
 
                 if (deliveredQty <= 0) return;
 
@@ -116,18 +126,18 @@ const InvoiceWorkbench = () => {
                 const allDeliveryDatesForEntry = entryDeliveries.map(d => new Date(d.deliveryDate).getTime());
                 const lastDeliveryDate = allDeliveryDatesForEntry.length > 0 ? new Date(Math.max(...allDeliveryDatesForEntry)).toISOString() : undefined;
 
-                const unitPrice: number = Number(product.price);
-                const total: number = Number(deliveredQty) * unitPrice;
+                const unitPrice: number = Number(priceValue);
+                const itemTotal: number = deliveredQty * unitPrice;
                 
                  // Check for surcharges but DON'T change the unit price
                 if (isSpecialClient && deliveredQty > 0 && deliveredQty <= 20) {
-                    specialClientSurchargeBase += total;
+                    specialClientSurchargeBase += itemTotal;
                 }
                 
                 // Apply dynamic surcharge, avoiding double-charging
                 if (thresholdNum > 0 && percentNum > 0 && deliveredQty > 0 && deliveredQty <= thresholdNum) {
                      if (!isSpecialClient || !(deliveredQty > 0 && deliveredQty <= 20)) {
-                        dynamicSurchargeBase += total;
+                        dynamicSurchargeBase += itemTotal;
                      }
                 }
 
@@ -135,7 +145,7 @@ const InvoiceWorkbench = () => {
                     productId: item.productId,
                     description: item.description,
                     unitPrice: unitPrice,
-                    total: total,
+                    total: itemTotal,
                     entryCode: entry.code,
                     reference: item.productRef,
                     orderedQty,
@@ -168,8 +178,8 @@ const InvoiceWorkbench = () => {
         }
 
 
-        const subtotal: number = docItems.reduce((sum: number, item: DocumentItem) => sum + item.total, 0);
-        const totalSurcharges: number = surcharges.reduce((sum: number, s: Surcharge) => sum + s.amount, 0);
+        const subtotal: number = docItems.reduce((sum: number, item: DocumentItem): number => sum + item.total, 0);
+        const totalSurcharges: number = surcharges.reduce((sum: number, s: Surcharge): number => sum + s.amount, 0);
         const taxRate: number = 21.00; // Example tax rate
         const taxAmount: number = (subtotal + totalSurcharges) * (taxRate / 100);
         const total: number = subtotal + totalSurcharges + taxAmount;
@@ -222,8 +232,8 @@ const InvoiceWorkbench = () => {
             html2canvas(input, { scale: 3, useCORS: true }).then((canvas: HTMLCanvasElement) => {
                 const imgData = canvas.toDataURL('image/png');
                 const pdf = new jsPDF('p', 'mm', 'a4');
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const pdfWidth = pdf.internal.pageSize.getWidth() as number;
+                const pdfHeight = pdf.internal.pageSize.getHeight() as number;
                 const canvasWidth = canvas.width;
                 const canvasHeight = canvas.height;
                 const ratio = canvasWidth / canvasHeight;
