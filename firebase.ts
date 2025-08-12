@@ -1,30 +1,32 @@
 
-import { initializeApp } from "firebase/app";
+
+import { initializeApp, getApps } from "firebase/app";
 import { initializeFirestore, enableIndexedDbPersistence } from "firebase/firestore";
 
-// Securely load Firebase config from environment variables
+// The execution environment provides secrets via a `process.env` object.
+// These variables are expected to be set without the `VITE_` prefix.
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+  apiKey: (process.env as any).FIREBASE_API_KEY,
+  authDomain: (process.env as any).FIREBASE_AUTH_DOMAIN,
+  projectId: (process.env as any).FIREBASE_PROJECT_ID,
+  storageBucket: (process.env as any).FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: (process.env as any).FIREBASE_MESSAGING_SENDER_ID,
+  appId: (process.env as any).FIREBASE_APP_ID,
+  measurementId: (process.env as any).FIREBASE_MEASUREMENT_ID
 };
 
 // A crucial check to ensure the app doesn't run without configuration.
 if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
   throw new Error(
     "Firebase configuration environment variables are not set. " +
-    "Please create a `.env` or `.env.local` file in your project root and add your VITE_FIREBASE_* variables, " +
-    "or set them in your deployment service's settings."
+    "Please set the FIREBASE_* variables (e.g., FIREBASE_API_KEY) in your deployment service's settings."
   );
 }
 
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+
 
 // Initialize Cloud Firestore with WebSocket fallback.
 // This helps prevent connection errors in environments that may block WebSockets.

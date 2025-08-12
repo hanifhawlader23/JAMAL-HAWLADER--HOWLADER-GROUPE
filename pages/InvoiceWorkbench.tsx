@@ -1,7 +1,5 @@
 
 
-
-
 import React, { useState, useMemo } from 'react';
 import { useData } from '../hooks/useData';
 import { EntryStatus, PaymentStatus, DocumentItem, Surcharge, Document, DeliveryItem, Entry } from '../types';
@@ -108,14 +106,12 @@ const InvoiceWorkbench = () => {
                 const priceValue = product ? product.price : 0;
                 if (!product || isNaN(Number(priceValue)) || Number(priceValue) === 0) return;
 
-                const orderedQty = (item.sizeQuantities && typeof item.sizeQuantities === 'object') ? Object.values(item.sizeQuantities).reduce((sum: number, q: number): number => sum + (Number(q) || 0), 0) : 0;
+                const orderedQty = Object.values(item.sizeQuantities || {}).reduce((sum: number, q: any) => sum + (Number(q) || 0), 0);
                 
                 const deliveriesForItem = entryDeliveries.flatMap(d => d.items).filter(dItem => dItem.entryItemId === item.id);
                 
-                const deliveredQty = deliveriesForItem.reduce((sum: number, dItem: DeliveryItem): number => {
-                    const itemQuantity = (dItem.sizeQuantities && typeof dItem.sizeQuantities === 'object')
-                        ? Object.values(dItem.sizeQuantities).reduce((qSum: number, q: number): number => qSum + (Number(q) || 0), 0)
-                        : 0;
+                const deliveredQty = deliveriesForItem.reduce((sum: number, dItem) => {
+                    const itemQuantity = Object.values(dItem.sizeQuantities || {}).reduce((qSum: number, q: any) => qSum + (Number(q) || 0), 0);
                     return sum + itemQuantity;
                 }, 0);
 
@@ -178,8 +174,8 @@ const InvoiceWorkbench = () => {
         }
 
 
-        const subtotal: number = docItems.reduce((sum: number, item: DocumentItem): number => sum + item.total, 0);
-        const totalSurcharges: number = surcharges.reduce((sum: number, s: Surcharge): number => sum + s.amount, 0);
+        const subtotal: number = docItems.reduce((sum, item) => sum + item.total, 0);
+        const totalSurcharges: number = surcharges.reduce((sum, s) => sum + s.amount, 0);
         const taxRate: number = 21.00; // Example tax rate
         const taxAmount: number = (subtotal + totalSurcharges) * (taxRate / 100);
         const total: number = subtotal + totalSurcharges + taxAmount;
