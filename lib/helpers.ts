@@ -2,7 +2,7 @@ export const generateId = () => {
   return Math.random().toString(36).substr(2, 9);
 };
 
-export const formatDate = (dateString) => {
+export const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -13,7 +13,7 @@ export const formatDate = (dateString) => {
 
 const nameColors = ['#ef4444', '#f97316', '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef', '#ec4899'];
 
-export const getColorForName = (name) => {
+export const getColorForName = (name: string) => {
     let hash = 0;
     if (!name || name.length === 0) return nameColors[0];
     for (let i = 0; i < name.length; i++) {
