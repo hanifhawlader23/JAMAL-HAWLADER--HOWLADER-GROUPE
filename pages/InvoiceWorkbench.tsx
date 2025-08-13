@@ -105,12 +105,12 @@ const InvoiceWorkbench = () => {
                 const priceValue = product ? Number(product.price) : 0;
                 if (!product || isNaN(priceValue) || priceValue === 0) return;
 
-                const orderedQty = Object.values(item.sizeQuantities || {}).reduce((sum: number, q: number) => sum + (q || 0), 0);
+                const orderedQty = Object.values(item.sizeQuantities || {}).reduce((sum: number, q: number) => sum + (Number(q) || 0), 0);
                 
                 const deliveriesForItem = entryDeliveries.flatMap(d => d.items).filter(dItem => dItem.entryItemId === item.id);
                 
                 const deliveredQty = deliveriesForItem.reduce((sum: number, dItem: DeliveryItem) => {
-                    const itemQuantity = Object.values(dItem.sizeQuantities || {}).reduce((qSum: number, q: number) => qSum + (q || 0), 0);
+                    const itemQuantity = Object.values(dItem.sizeQuantities || {}).reduce((qSum: number, q: number) => qSum + (Number(q) || 0), 0);
                     return sum + itemQuantity;
                 }, 0);
 

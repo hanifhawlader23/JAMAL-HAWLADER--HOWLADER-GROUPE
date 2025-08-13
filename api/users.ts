@@ -4,8 +4,6 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { Role } from '../../types';
 
-export const runtime = 'edge';
-
 // A simple auth check placeholder; replace with your actual auth logic
 async function checkAuth(req: Request) { return true; }
 

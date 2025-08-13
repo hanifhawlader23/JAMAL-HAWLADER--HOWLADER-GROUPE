@@ -5,8 +5,6 @@ import jwt from 'jsonwebtoken';
 import { serialize } from 'cookie';
 import { Role } from '../../types';
 
-export const runtime = 'edge';
-
 export default async function POST(req: Request) {
   try {
     const { fullName, username, password } = await req.json();

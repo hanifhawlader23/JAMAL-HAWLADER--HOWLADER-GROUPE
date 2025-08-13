@@ -3,8 +3,6 @@ import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 
-export const runtime = 'edge';
-
 export default async function GET(request: Request) {
   try {
     let result;

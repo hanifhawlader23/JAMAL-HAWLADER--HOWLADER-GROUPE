@@ -3,8 +3,6 @@ import { sql } from '@vercel/postgres';
 import jwt from 'jsonwebtoken';
 import { parse } from 'cookie';
 
-export const runtime = 'edge';
-
 export default async function GET(req: Request) {
   const cookies = parse(req.headers.get('Cookie') || '');
   const token = cookies.token;
