@@ -1,5 +1,5 @@
 export const generateId = () => {
-  return Math.random().toString(36).substr(2, 9);
+  return Math.random().toString(36).slice(2, 11);
 };
 
 export const formatDate = (dateString: string) => {
