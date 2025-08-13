@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 import { useData } from '../hooks/useData';
 import Modal from '../components/Modal';
 import ConfirmationModal from '../components/ConfirmationModal';
+import { Client } from '../types';
 
 const Clients = () => {
     const { clients, addClient, updateClient, deleteClient } = useData();
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingClient, setEditingClient] = useState(null);
+    const [editingClient, setEditingClient] = useState<Client | null>(null);
     const [confirmModalState, setConfirmModalState] = useState({ isOpen: false, idToDelete: '' });
 
-    const openModal = (client = null) => {
+    const openModal = (client: Client | null = null) => {
         setEditingClient(client);
         setIsModalOpen(true);
     };
@@ -19,12 +20,12 @@ const Clients = () => {
         setIsModalOpen(false);
     };
     
-    const handleDeleteClick = (id) => {
+    const handleDeleteClick = (id: string) => {
         setConfirmModalState({ isOpen: true, idToDelete: id });
     };
 
-    const handleConfirmDelete = () => {
-        deleteClient(confirmModalState.idToDelete);
+    const handleConfirmDelete = async () => {
+        await deleteClient(confirmModalState.idToDelete);
         setConfirmModalState({ isOpen: false, idToDelete: '' });
     };
 
@@ -85,8 +86,9 @@ const Clients = () => {
 };
 
 
-const ClientFormModal = ({ isOpen, onClose, client }) => {
+const ClientFormModal = ({ isOpen, onClose, client }: { isOpen: boolean, onClose: () => void, client: Client | null }) => {
     const { addClient, updateClient } = useData();
+    const [isUploading, setIsUploading] = useState(false);
     const [formData, setFormData] = useState({
         name: client?.name || '',
         address: client?.address || '',
@@ -96,27 +98,44 @@ const ClientFormModal = ({ isOpen, onClose, client }) => {
         logoUrl: client?.logoUrl || '',
     });
 
-    const handleChange = (e) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
 
-    const handleLogoChange = (e) => {
+    const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setFormData(prev => ({ ...prev, logoUrl: reader.result }));
-            };
-            reader.readAsDataURL(file);
+        if (!file) return;
+
+        setIsUploading(true);
+        try {
+            const response = await fetch(`/api/upload?filename=${file.name}`, {
+                method: 'POST',
+            });
+            const newBlob = await response.json();
+            
+            await fetch(newBlob.url, {
+                method: 'PUT',
+                body: file,
+                headers: {
+                    'Content-Type': file.type,
+                },
+            });
+
+            setFormData(prev => ({ ...prev, logoUrl: newBlob.downloadUrl }));
+        } catch (error) {
+            console.error("Failed to upload logo:", error);
+            alert("Failed to upload logo. Please try again.");
+        } finally {
+            setIsUploading(false);
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (client) {
-            updateClient(client.id, formData);
+            await updateClient(client.id, formData);
         } else {
-            addClient(formData);
+            await addClient(formData);
         }
         onClose();
     };
@@ -148,8 +167,9 @@ const ClientFormModal = ({ isOpen, onClose, client }) => {
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-[var(--text-secondary)]">Client Logo</label>
-                    <input type="file" accept="image/*" onChange={handleLogoChange} className="mt-1 block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--rose-gold-base)] file:text-white hover:file:bg-[var(--metallic-rose)]" />
-                    {formData.logoUrl && (
+                    <input type="file" accept="image/*" onChange={handleLogoChange} disabled={isUploading} className="mt-1 block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--rose-gold-base)] file:text-white hover:file:bg-[var(--metallic-rose)]" />
+                    {isUploading && <p className="text-sm text-yellow-400 mt-2">Uploading...</p>}
+                    {formData.logoUrl && !isUploading && (
                         <div className='mt-2'>
                           <img src={formData.logoUrl} alt="Logo Preview" className="h-20 w-auto object-contain rounded-md bg-gray-700/50 p-1" />
                           <button type="button" onClick={() => setFormData(prev => ({ ...prev, logoUrl: '' }))} className="text-xs text-red-400 hover:underline mt-1">Remove Logo</button>
@@ -158,7 +178,7 @@ const ClientFormModal = ({ isOpen, onClose, client }) => {
                 </div>
                 <div className="pt-4 flex justify-end space-x-2">
                     <button type="button" onClick={onClose} className="btn-3d cancel">Cancel</button>
-                    <button type="submit" className="btn-3d success">Save</button>
+                    <button type="submit" className="btn-3d success" disabled={isUploading}>Save</button>
                 </div>
             </form>
         </Modal>

@@ -1,9 +1,4 @@
 
-
-
-
-
-
 import React, { useState, useMemo } from 'react';
 import { useData } from '../hooks/useData';
 import { EntryStatus, PaymentStatus, DocumentItem, Surcharge, Document, DeliveryItem, Entry } from '../types';
@@ -114,7 +109,7 @@ const InvoiceWorkbench = () => {
                 
                 const deliveriesForItem = entryDeliveries.flatMap(d => d.items).filter(dItem => dItem.entryItemId === item.id);
                 
-                const deliveredQty = deliveriesForItem.reduce((sum: number, dItem) => {
+                const deliveredQty = deliveriesForItem.reduce((sum: number, dItem: DeliveryItem) => {
                     const itemQuantity = Object.values(dItem.sizeQuantities || {}).reduce((qSum: number, q: number) => qSum + (q || 0), 0);
                     return sum + itemQuantity;
                 }, 0);
@@ -178,11 +173,11 @@ const InvoiceWorkbench = () => {
         }
 
 
-        const subtotal: number = docItems.reduce((sum: number, item) => sum + (item.total || 0), 0);
-        const totalSurcharges: number = surcharges.reduce((sum: number, s) => sum + (s.amount || 0), 0);
-        const taxRate: number = 21.00; // Example tax rate
-        const taxAmount: number = (subtotal + totalSurcharges) * (taxRate / 100);
-        const total: number = subtotal + totalSurcharges + taxAmount;
+        const subtotal = docItems.reduce((sum, item) => sum + (item.total || 0), 0);
+        const totalSurcharges = surcharges.reduce((sum, s) => sum + (s.amount || 0), 0);
+        const taxRate = 21.00; // Example tax rate
+        const taxAmount = (subtotal + totalSurcharges) * (taxRate / 100);
+        const total = subtotal + totalSurcharges + taxAmount;
 
         const newDocument: Document = {
             id: 'temp-' + Date.now(), // Temporary ID for preview
@@ -210,7 +205,7 @@ const InvoiceWorkbench = () => {
         if (!previewingDocument) return;
         
         const { id, ...docData } = previewingDocument; // remove temp id
-        const newDocument = await addDocument(docData as Omit<Document, 'id'>);
+        const newDocument = await addDocument(docData as Omit<Document, 'id'>) as Document;
         
         const newStatus = newDocument.documentType === 'Factura' ? EntryStatus.INVOICED : EntryStatus.PRE_INVOICED;
 

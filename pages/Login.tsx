@@ -11,10 +11,10 @@ const Login = () => {
   const { login, loginWithBiometrics } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    const result = login(username, password);
+    const result = await login(username, password);
     if (result.success) {
       navigate('/');
     } else {

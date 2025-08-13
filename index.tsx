@@ -1,3 +1,4 @@
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
@@ -14,11 +15,11 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ToastProvider>
-      <DataProvider>
-        <AuthProvider>
+      <AuthProvider>
+        <DataProvider>
           <App />
-        </AuthProvider>
-      </DataProvider>
+        </DataProvider>
+      </AuthProvider>
     </ToastProvider>
   </React.StrictMode>
 );

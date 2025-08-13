@@ -1,9 +1,8 @@
 
+
 import React, { useState } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AppLoadingScreen, ConnectionErrorScreen } from './context/DataContext';
 import { useAuth } from './hooks/useAuth';
-import { useData } from './hooks/useData';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Login from './pages/Login';
@@ -20,18 +19,15 @@ import { Role } from './types';
 import ForgotPassword from './pages/ForgotPassword';
 import SignUp from './pages/SignUp';
 import AiAssistant from './components/AiAssistant';
+import Setup from './pages/Setup';
 
 const App = () => {
-  const { isAppLoading, connectionError } = useData();
-  const { isAuthenticated, hasRole } = useAuth();
+  const { isAuthenticated, hasRole, authLoading } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  if (connectionError) {
-    return <ConnectionErrorScreen error={connectionError} />;
-  }
-
-  if (isAppLoading) {
-    return <AppLoadingScreen />;
+  if (authLoading) {
+    // AuthProvider now shows its own loading screen, so we can render null here or a minimal loader.
+    return null;
   }
 
   const AdminRoute = ({ children }: { children: React.ReactNode }) => {
@@ -45,6 +41,7 @@ const App = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/setup" element={<Setup />} />
           <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
       </HashRouter>

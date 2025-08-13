@@ -9,13 +9,20 @@
   },
   "dependencies": {
     "@google/genai": "^0.15.0",
-    "firebase": "^10.12.2",
+    "@vercel/blob": "^0.23.4",
+    "@vercel/postgres": "^0.9.0",
+    "bcryptjs": "^2.4.3",
+    "cookie": "^0.6.0",
+    "jsonwebtoken": "^9.0.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.24.1",
     "recharts": "^2.12.7"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie": "^0.6.0",
+    "@types/jsonwebtoken": "^9.0.6",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",

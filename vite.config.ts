@@ -4,25 +4,42 @@ import react from '@vitejs/plugin-react';
 import type { Connect } from 'vite';
 import http from 'http';
 
+// Helper to read body from request
+async function readBody(req: Connect.IncomingMessage): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+        const body: Buffer[] = [];
+        req.on('data', chunk => body.push(chunk));
+        req.on('end', () => resolve(Buffer.concat(body)));
+        req.on('error', err => reject(err));
+    });
+}
+
 const apiPlugin = () => ({
   name: 'vite-plugin-api-routes',
   configureServer(server: any) {
     server.middlewares.use(async (req: Connect.IncomingMessage, res: http.ServerResponse, next: Connect.NextFunction) => {
       if (req.url && req.url.startsWith('/api/')) {
         try {
-          const moduleUrl = `.${req.url}.ts`;
-          const { default: handler } = await import(moduleUrl);
+          // Construct the path to the API handler module
+          const modulePath = `.${req.url.split('?')[0]}.ts`;
           
+          // Dynamically import the handler
+          const { default: handler } = await import(modulePath);
+          
+          // Reconstruct the request for the handler
           const request = new Request(`http://${req.headers.host}${req.url}`, {
             method: req.method,
             headers: req.headers as HeadersInit,
-            body: req.method !== 'GET' && req.method !== 'HEAD' ? req as any : null,
+            // Only add body for relevant methods
+            body: req.method !== 'GET' && req.method !== 'HEAD' ? await readBody(req) : null,
             // @ts-ignore
             duplex: 'half',
           });
           
+          // Call the handler and get the response
           const response = await handler(request);
 
+          // Pipe the response back to the client
           res.statusCode = response.status;
           for (const [key, value] of response.headers.entries()) {
             res.setHeader(key, value);
@@ -42,7 +59,7 @@ const apiPlugin = () => ({
           console.error(`API handler error for ${req.url}:`, error);
           if (!res.headersSent) {
             res.statusCode = 500;
-            res.end('Internal Server Error');
+            res.end('Internal Server Error. Check Vite console for details.');
           }
           return;
         }
