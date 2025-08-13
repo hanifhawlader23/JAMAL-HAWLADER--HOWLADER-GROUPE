@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './hooks/useAuth';
+import { useAuth } from './hooks/useAuth.tsx';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Login from './pages/Login';
@@ -20,8 +20,6 @@ import ForgotPassword from './pages/ForgotPassword';
 import SignUp from './pages/SignUp';
 import AiAssistant from './components/AiAssistant';
 import Setup from './pages/Setup';
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/react';
 
 const AdminRouteWrapper = ({ children }: { children: JSX.Element }) => {
     const { hasRole } = useAuth();
@@ -47,8 +45,6 @@ const App = () => {
           <Route path="/setup" element={<Setup />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
-        <Analytics />
-        <SpeedInsights />
       </BrowserRouter>
     );
   }
@@ -78,8 +74,6 @@ const App = () => {
           <AiAssistant />
         </div>
       </div>
-      <Analytics />
-      <SpeedInsights />
     </BrowserRouter>
   );
 };

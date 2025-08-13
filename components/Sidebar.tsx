@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuth.tsx';
 import { NAVIGATION_LINKS } from '../constants';
 
 const Sidebar = ({ isSidebarOpen, closeSidebar }) => {

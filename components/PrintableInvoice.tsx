@@ -7,7 +7,7 @@ interface PrintableInvoiceProps {
     logoSize: number;
 }
 
-const PrintableInvoice: React.FC<PrintableInvoiceProps> = ({ document, logoSize }) => {
+const PrintableInvoice = React.forwardRef<HTMLDivElement, PrintableInvoiceProps>(({ document, logoSize }, ref) => {
     const { companyDetails, clients } = useData();
     const client = clients.find(c => c.id === document.clientId);
 
@@ -47,7 +47,7 @@ const PrintableInvoice: React.FC<PrintableInvoiceProps> = ({ document, logoSize 
 
 
     return (
-        <div id={`printable-area-${document.id}`} className="invoice-container">
+        <div id={`printable-area-${document.id}`} ref={ref} className="invoice-container">
             <style>
                 {`
                 @page {
@@ -336,6 +336,6 @@ const PrintableInvoice: React.FC<PrintableInvoiceProps> = ({ document, logoSize 
             </main>
         </div>
     );
-};
+});
 
 export default PrintableInvoice;

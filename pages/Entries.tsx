@@ -8,7 +8,7 @@ import Modal from '../components/Modal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { generateId, formatDate, getColorForName } from '../lib/helpers';
 import { STATUS_STYLES, SIZES, SPECIAL_CLIENT_NAME } from '../constants';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuth.tsx';
 
 const STATUS_GROUPS_TO_DISPLAY = [EntryStatus.RECEIVED, EntryStatus.IN_PROCESS, EntryStatus.DELIVERED, EntryStatus.PRE_INVOICED];
 
@@ -480,53 +480,55 @@ const EntryFormModal = ({ isOpen, onClose, entry }: { isOpen: boolean, onClose: 
         e.preventDefault();
         if (!currentUser) return;
 
-        const finalItemsPromises = formData.items.map(async item => {
-            if (!item.productRef) {
-                throw new Error(`Please provide a Product Reference for item: ${item.description || 'Unnamed Item'}`);
-            }
-            
-            let product = products.find(p => p.reference.toLowerCase() === item.productRef.toLowerCase());
-            let finalProductId = product?.id;
-
-            if (!product) {
-                const confirmed = await new Promise(resolve => {
-                    if(window.confirm(`Product with reference "${item.productRef}" not found. Do you want to create a new product for it?`)) {
-                        resolve(true);
-                    } else {
-                        resolve(false);
-                    }
-                });
-
-                if (confirmed) {
-                    const newProduct = {
-                        code: 'N/A', modelName: item.description || "New Product",
-                        price: 0, category: 'Uncategorized', reference: item.productRef,
-                        description: item.description || item.productRef,
-                    };
-                    await addProduct(newProduct);
-                    
-                    // We need to find the product ID after adding it. This is tricky without waiting for the state to update.
-                    // For now, we'll alert the user to re-add the entry.
-                    // A better solution would involve returning the new product ID from addProduct.
-                    alert("New product created. Please re-open the form and select the new product to finalize the entry.");
-                    throw new Error("New product created, please re-add entry.");
-
-                } else {
-                    throw new Error("Product creation cancelled.");
-                }
-            }
-    
-            if (!finalProductId) {
-                throw new Error(`Error: Could not determine product ID for reference ${item.productRef}.`);
-            }
-    
-            return {
-                ...item,
-                productId: finalProductId,
-            };
-        });
-        
         try {
+            const finalItemsPromises = formData.items.map(async item => {
+                if (!item.productRef) {
+                    throw new Error(`Please provide a Product Reference for item: ${item.description || 'Unnamed Item'}`);
+                }
+                
+                let product = products.find(p => p.reference.toLowerCase() === item.productRef.toLowerCase());
+                let finalProductId = product?.id;
+
+                if (!product) {
+                    const confirmed = await new Promise<boolean>(resolve => {
+                        if(window.confirm(`Product with reference "${item.productRef}" not found. Do you want to create it? It will be created with a price of €0.00 that you should update later in the Product Catalog.`)) {
+                            resolve(true);
+                        } else {
+                            resolve(false);
+                        }
+                    });
+
+                    if (confirmed) {
+                        const newProductData = {
+                            code: 'N/A',
+                            modelName: item.description || "New Product",
+                            price: 0,
+                            category: 'Uncategorized',
+                            reference: item.productRef,
+                            description: item.description || item.productRef,
+                            clientId: formData.clientId || null,
+                        };
+                        const newProduct = await addProduct(newProductData);
+                        if (newProduct && newProduct.id) {
+                            finalProductId = newProduct.id;
+                        } else {
+                            throw new Error("Failed to create the new product or retrieve its ID. Please try again.");
+                        }
+                    } else {
+                        throw new Error(`Product creation for reference "${item.productRef}" was cancelled.`);
+                    }
+                }
+        
+                if (!finalProductId) {
+                    throw new Error(`Could not determine a product ID for reference "${item.productRef}".`);
+                }
+        
+                return {
+                    ...item,
+                    productId: finalProductId,
+                };
+            });
+            
             const finalItems = await Promise.all(finalItemsPromises);
             
             const finalEntryData = {
@@ -543,11 +545,7 @@ const EntryFormModal = ({ isOpen, onClose, entry }: { isOpen: boolean, onClose: 
             onClose();
 
         } catch (error: any) {
-            if (error.message.includes("Product creation cancelled") || error.message.includes("please re-add entry")) {
-                 alert("Submission cancelled. Please ensure all product references exist or agree to create new ones.");
-            } else {
-                 alert(`An error occurred: ${error.message}`);
-            }
+             alert(`Submission failed: ${error.message}`);
         }
     };
     

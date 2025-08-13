@@ -7,7 +7,7 @@ import DashboardCard from '../components/DashboardCard';
 import { useData } from '../hooks/useData';
 import { EntryStatus, Role, EntryItem, DeliveryItem, Product, Entry, Delivery, Client } from '../types';
 import { COLORS, SIZES } from '../constants';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuth.tsx';
 import Modal from '../components/Modal';
 import DateRangePicker from '../components/DateRangePicker';
 

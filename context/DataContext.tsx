@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { CompanyDetails, User, Client, Product, Entry, Delivery, Document, Role } from '../types';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuth.tsx';
 import { AppLoadingScreen } from '../components/AppLoadingScreen';
 
 export const DataContext = createContext(undefined);
@@ -30,7 +30,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       const data = await res.json();
       setUsers(data.users || []);
       setClients(data.clients || []);
-      setProducts(data.products || []);
+      
+      // Prices from the DB can be strings, so we parse them to numbers here.
+      const parsedProducts = (data.products || []).map((p: any) => ({
+          ...p,
+          price: parseFloat(p.price) || 0,
+      }));
+      setProducts(parsedProducts);
+
       setEntries(data.entries || []);
       setDeliveries(data.deliveries || []);
       setDocuments(data.documents || []);

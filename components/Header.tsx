@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuth.tsx';
 import { useData } from '../hooks/useData';
 import { ROLES, NAVIGATION_LINKS } from '../constants';
 import { Role } from '../types';

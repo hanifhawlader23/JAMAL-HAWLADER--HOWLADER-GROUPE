@@ -1,9 +1,10 @@
+
 import React, { useState, useMemo } from 'react';
 import { useData } from '../hooks/useData';
 import Modal from '../components/Modal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { Role } from '../types';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuth.tsx';
 
 // Reusable ProductTable component to display a list of products
 const ProductTable = ({

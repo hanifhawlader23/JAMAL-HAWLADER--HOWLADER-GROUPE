@@ -1,6 +1,6 @@
 
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useData } from '../hooks/useData';
 import { EntryStatus, PaymentStatus, DocumentItem, Surcharge, Document, DeliveryItem, Entry } from '../types';
 import { formatDate } from '../lib/helpers';
@@ -21,6 +21,7 @@ const InvoiceWorkbench = () => {
     const [quantityThreshold, setQuantityThreshold] = useState('');
     const [priceIncreasePercent, setPriceIncreasePercent] = useState('');
     const [logoSize, setLogoSize] = useState(60);
+    const printableRef = useRef<HTMLDivElement>(null);
 
 
     const availableEntries = useMemo(() => {
@@ -106,12 +107,12 @@ const InvoiceWorkbench = () => {
                 const priceValue = product ? Number(product.price) : 0;
                 if (!product || isNaN(priceValue) || priceValue === 0) return;
 
-                const orderedQty = Object.values(item.sizeQuantities || {}).reduce((sum: number, q: unknown) => sum + (Number(q) || 0), 0);
+                const orderedQty = Object.values(item.sizeQuantities || {}).reduce((sum: number, q: number) => sum + (q || 0), 0);
                 
                 const deliveriesForItem = entryDeliveries.flatMap(d => d.items).filter(dItem => dItem.entryItemId === item.id);
                 
                 const deliveredQty = deliveriesForItem.reduce((sum: number, dItem: DeliveryItem) => {
-                    const itemQuantity = Object.values(dItem.sizeQuantities || {}).reduce((qSum: number, q: unknown) => qSum + (Number(q) || 0), 0);
+                    const itemQuantity = Object.values(dItem.sizeQuantities || {}).reduce((qSum: number, q: number) => qSum + (q || 0), 0);
                     return sum + itemQuantity;
                 }, 0);
 
@@ -174,8 +175,8 @@ const InvoiceWorkbench = () => {
         }
 
 
-        const subtotal = docItems.reduce((sum, item) => sum + Number(item.total || 0), 0);
-        const totalSurcharges = surcharges.reduce((sum, s) => sum + Number(s.amount || 0), 0);
+        const subtotal = docItems.reduce<number>((sum, item) => sum + (item.total || 0), 0);
+        const totalSurcharges = surcharges.reduce<number>((sum, s) => sum + (s.amount || 0), 0);
         const taxRate = 21.00; // Example tax rate
         const taxAmount = (subtotal + totalSurcharges) * (taxRate / 100);
         const total = subtotal + totalSurcharges + taxAmount;
@@ -221,32 +222,28 @@ const InvoiceWorkbench = () => {
         setPreviewingDocument(null);
     };
 
-    const downloadPdf = (documentId: string, documentNumber: string) => {
+    const downloadPdf = (documentNumber: string) => {
         const { jsPDF } = jspdf;
-        const input = document.getElementById(`printable-area-${documentId}`);
+        const input = printableRef.current;
         if (input) {
-            html2canvas(input, { scale: 3, useCORS: true }).then((canvas: HTMLCanvasElement) => {
+            html2canvas(input, { scale: 3, useCORS: true }).then((canvas: any) => {
                 const imgData = canvas.toDataURL('image/png');
                 const pdf = new jsPDF('p', 'mm', 'a4');
-                const pdfWidth = pdf.internal.pageSize.getWidth() as number;
-                const pdfHeight = pdf.internal.pageSize.getHeight() as number;
-                const canvasWidth = canvas.width;
-                const canvasHeight = canvas.height;
-                const ratio = canvasWidth / canvasHeight;
-                const width = pdfWidth;
-                let height = width / ratio;
-
-                // Handle multi-page content
-                let heightLeft = height;
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                
+                const imgHeight = canvas.height * pdfWidth / canvas.width;
+                let heightLeft = imgHeight;
+                
                 let position = 0;
-
-                pdf.addImage(imgData, 'PNG', 0, position, width, height);
+                
+                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
                 heightLeft -= pdfHeight;
-
+                
                 while (heightLeft > 0) {
-                    position = heightLeft - height;
+                    position -= pdfHeight;
                     pdf.addPage();
-                    pdf.addImage(imgData, 'PNG', 0, position, width, height);
+                    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
                     heightLeft -= pdfHeight;
                 }
                 
@@ -330,7 +327,7 @@ const InvoiceWorkbench = () => {
                 <Modal isOpen={!!previewingDocument} onClose={() => setPreviewingDocument(null)} title={`${previewingDocument.documentType} Preview`} footer={
                     <div className="flex justify-end space-x-2">
                         <button onClick={() => setPreviewingDocument(null)} className="btn-3d cancel">Cancel</button>
-                        <button onClick={() => downloadPdf(previewingDocument.id, previewingDocument.documentNumber)} className="btn-3d" style={{'--bg-color': '#4f46e5', '--shadow-color': '#3730a3'} as React.CSSProperties}>Download PDF</button>
+                        <button onClick={() => downloadPdf(previewingDocument.documentNumber)} className="btn-3d" style={{'--bg-color': '#4f46e5', '--shadow-color': '#3730a3'} as React.CSSProperties}>Download PDF</button>
                         <button onClick={handleConfirmDocument} className="btn-3d success">Confirm and Save</button>
                     </div>
                 }>
@@ -338,7 +335,7 @@ const InvoiceWorkbench = () => {
                         <label className="text-[var(--text-secondary)] text-sm">Logo Size:</label>
                         <input type="range" min="30" max="150" value={logoSize} onChange={(e) => setLogoSize(Number(e.target.value))} className="w-48"/>
                     </div>
-                    <PrintableInvoice document={previewingDocument} logoSize={logoSize}/>
+                    <PrintableInvoice ref={printableRef} document={previewingDocument} logoSize={logoSize}/>
                 </Modal>
             )}
         </div>

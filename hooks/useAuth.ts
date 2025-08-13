@@ -1,10 +1,1 @@
-import { useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+// This file is intentionally left empty. The implementation is in hooks/useAuth.tsx to resolve module ambiguity.
