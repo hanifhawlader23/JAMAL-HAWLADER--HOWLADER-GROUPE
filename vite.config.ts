@@ -1,15 +1,25 @@
 
+
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import type { Connect } from 'vite';
 import http from 'http';
 
 // Helper to read body from request
-async function readBody(req: Connect.IncomingMessage): Promise<Buffer> {
+async function readBody(req: Connect.IncomingMessage): Promise<Uint8Array> {
     return new Promise((resolve, reject) => {
-        const body: Buffer[] = [];
-        req.on('data', chunk => body.push(chunk));
-        req.on('end', () => resolve(Buffer.concat(body)));
+        const bodyChunks: any[] = [];
+        req.on('data', chunk => bodyChunks.push(chunk));
+        req.on('end', () => {
+            const totalLength = bodyChunks.reduce((acc, val) => acc + val.length, 0);
+            const result = new Uint8Array(totalLength);
+            let offset = 0;
+            for (const chunk of bodyChunks) {
+                result.set(chunk, offset);
+                offset += chunk.length;
+            }
+            resolve(result);
+        });
         req.on('error', err => reject(err));
     });
 }

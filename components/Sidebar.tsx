@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -26,9 +27,7 @@ const Sidebar = ({ isSidebarOpen, closeSidebar }) => {
                 <NavLink
                   to={link.path}
                   onClick={handleLinkClick}
-                  className={({ isActive }) => 
-                    `sidebar-link-3d ${isActive ? 'active' : ''}`
-                  }
+                  className={({ isActive }) => `sidebar-link-3d ${isActive ? 'active' : ''}`}
                 >
                   <span className="mr-3 text-xl">{link.icon}</span>
                   <span>{link.label}</span>

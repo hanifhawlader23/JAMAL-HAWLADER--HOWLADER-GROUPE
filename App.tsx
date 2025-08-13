@@ -1,7 +1,7 @@
 
 
 import React, { useState } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -20,6 +20,13 @@ import ForgotPassword from './pages/ForgotPassword';
 import SignUp from './pages/SignUp';
 import AiAssistant from './components/AiAssistant';
 import Setup from './pages/Setup';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
+
+const AdminRouteWrapper = ({ children }: { children: JSX.Element }) => {
+    const { hasRole } = useAuth();
+    return hasRole([Role.ADMIN]) ? children : <Navigate to="/" replace />;
+};
 
 const App = () => {
   const { isAuthenticated, hasRole, authLoading } = useAuth();
@@ -30,26 +37,24 @@ const App = () => {
     return null;
   }
 
-  const AdminRoute = ({ children }: { children: React.ReactNode }) => {
-    return hasRole([Role.ADMIN]) ? <>{children}</> : <Navigate to="/" />;
-  };
-
   if (!isAuthenticated) {
     return (
-      <HashRouter>
+      <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/setup" element={<Setup />} />
-          <Route path="*" element={<Navigate to="/login" />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
-      </HashRouter>
+        <Analytics />
+        <SpeedInsights />
+      </BrowserRouter>
     );
   }
 
   return (
-    <HashRouter>
+    <BrowserRouter>
       <div className="flex min-h-screen bg-[var(--page-bg)]">
         {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} className="fixed inset-0 bg-black/50 z-20 lg:hidden"></div>}
         <Sidebar isSidebarOpen={isSidebarOpen} closeSidebar={() => setIsSidebarOpen(false)} />
@@ -58,24 +63,24 @@ const App = () => {
           <main className="flex-1 p-6 overflow-y-auto">
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/entries" >
-                  <Route index element={<Entries />} />
-                  <Route path=":statusFilter" element={<Entries />} />
-              </Route>
-              <Route path="/products" element={<AdminRoute><ProductCatalog /></AdminRoute>} />
-              <Route path="/clients" element={<AdminRoute><Clients /></AdminRoute>} />
-              <Route path="/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
-              <Route path="/company" element={<AdminRoute><CompanyDetailsPage /></AdminRoute>} />
-              <Route path="/invoice-workbench" element={<AdminRoute><InvoiceWorkbench /></AdminRoute>} />
-              <Route path="/invoice-history" element={<AdminRoute><InvoiceHistory /></AdminRoute>} />
-              <Route path="/login" element={<Navigate to="/" />} />
+              <Route path="/entries/:statusFilter" element={<Entries />} />
+              <Route path="/entries" element={<Entries />} />
+              <Route path="/products" element={<AdminRouteWrapper><ProductCatalog /></AdminRouteWrapper>} />
+              <Route path="/clients" element={<AdminRouteWrapper><Clients /></AdminRouteWrapper>} />
+              <Route path="/users" element={<AdminRouteWrapper><UserManagement /></AdminRouteWrapper>} />
+              <Route path="/company" element={<AdminRouteWrapper><CompanyDetailsPage /></AdminRouteWrapper>} />
+              <Route path="/invoice-workbench" element={<AdminRouteWrapper><InvoiceWorkbench /></AdminRouteWrapper>} />
+              <Route path="/invoice-history" element={<AdminRouteWrapper><InvoiceHistory /></AdminRouteWrapper>} />
+              <Route path="/login" element={<Navigate to="/" replace />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
           <AiAssistant />
         </div>
       </div>
-    </HashRouter>
+      <Analytics />
+      <SpeedInsights />
+    </BrowserRouter>
   );
 };
 

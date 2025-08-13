@@ -1,4 +1,3 @@
-
 import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
 
@@ -6,7 +5,7 @@ export const runtime = 'edge';
 
 async function checkAuth(req: Request) { return true; }
 
-export async function POST(req: Request) {
+export default async function POST(req: Request) {
     if (!await checkAuth(req)) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -59,13 +60,13 @@ const Header = ({ toggleSidebar }) => {
   const handleResultClick = (result) => {
       setSearchQuery('');
       setIsSearchActive(false);
-      let navigationState = {};
+      let stateToPass = {};
       if (result.type === 'Invoice') {
-          navigationState = { state: { openDocumentId: result.id } };
+          stateToPass = { openDocumentId: result.id };
       } else if (result.type === 'Entry') {
-          navigationState = { state: { openEntryId: result.id } };
+          stateToPass = { openEntryId: result.id };
       }
-      navigate(result.path, navigationState);
+      navigate(result.path, { state: stateToPass });
   };
   
   const handleRoleSwitch = (e) => {

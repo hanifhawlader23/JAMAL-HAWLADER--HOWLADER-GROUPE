@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../hooks/useData';
@@ -37,13 +38,13 @@ const Entries = () => {
     const [deliveryTargetEntry, setDeliveryTargetEntry] = useState<Entry | null>(null);
     const [confirmModalState, setConfirmModalState] = useState({ isOpen: false, idToDelete: '' });
     
-    const { statusFilter } = useParams();
+    const { statusFilter } = useParams<{ statusFilter: string }>();
     const isAdmin = useMemo(() => hasRole([Role.ADMIN]), [hasRole]);
     const location = useLocation();
     const navigate = useNavigate();
 
     useEffect(() => {
-        const entryIdToOpen = location.state?.openEntryId;
+        const entryIdToOpen = (location.state as any)?.openEntryId;
         if (entryIdToOpen) {
             const entryToView = entries.find(e => e.id === entryIdToOpen);
             if (entryToView) {
@@ -52,7 +53,7 @@ const Entries = () => {
                 navigate(location.pathname, { replace: true, state: {} });
             }
         }
-    }, [location.state, entries, navigate]);
+    }, [location.state, entries, navigate, location.pathname]);
 
     const filteredEntries = useMemo(() => {
         if (!statusFilter) return entries;

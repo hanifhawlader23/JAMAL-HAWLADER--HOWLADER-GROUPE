@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo } from 'react';
 import { useData } from '../hooks/useData';
 import { EntryStatus, PaymentStatus, DocumentItem, Surcharge, Document, DeliveryItem, Entry } from '../types';
@@ -88,8 +89,8 @@ const InvoiceWorkbench = () => {
         const clientName = clients.find(c => c.id === firstClientId)?.name;
         const isSpecialClient = clientName === SPECIAL_CLIENT_NAME;
 
-        const thresholdNum = quantityThreshold ? parseInt(quantityThreshold, 10) : 0;
-        const percentNum = priceIncreasePercent ? parseFloat(priceIncreasePercent) : 0;
+        const thresholdNum = parseInt(quantityThreshold, 10) || 0;
+        const percentNum = parseFloat(priceIncreasePercent) || 0;
 
 
         const docItems: DocumentItem[] = [];
@@ -105,22 +106,22 @@ const InvoiceWorkbench = () => {
                 const priceValue = product ? Number(product.price) : 0;
                 if (!product || isNaN(priceValue) || priceValue === 0) return;
 
-                const orderedQty = Object.values(item.sizeQuantities || {}).reduce((sum: number, q: number) => sum + (Number(q) || 0), 0);
+                const orderedQty = Object.values(item.sizeQuantities || {}).reduce((sum: number, q: unknown) => sum + (Number(q) || 0), 0);
                 
                 const deliveriesForItem = entryDeliveries.flatMap(d => d.items).filter(dItem => dItem.entryItemId === item.id);
                 
                 const deliveredQty = deliveriesForItem.reduce((sum: number, dItem: DeliveryItem) => {
-                    const itemQuantity = Object.values(dItem.sizeQuantities || {}).reduce((qSum: number, q: number) => qSum + (Number(q) || 0), 0);
+                    const itemQuantity = Object.values(dItem.sizeQuantities || {}).reduce((qSum: number, q: unknown) => qSum + (Number(q) || 0), 0);
                     return sum + itemQuantity;
                 }, 0);
 
                 if (deliveredQty <= 0) return;
 
-                const pendingQty = orderedQty - deliveredQty;
-
                 const allDeliveryDatesForEntry = entryDeliveries.map(d => new Date(d.deliveryDate).getTime());
                 const lastDeliveryDate = allDeliveryDatesForEntry.length > 0 ? new Date(Math.max(...allDeliveryDatesForEntry)).toISOString() : undefined;
 
+                const pendingQty = orderedQty - deliveredQty;
+                
                 const unitPrice: number = priceValue;
                 const itemTotal: number = deliveredQty * unitPrice;
                 
@@ -173,8 +174,8 @@ const InvoiceWorkbench = () => {
         }
 
 
-        const subtotal = docItems.reduce((sum, item) => sum + (item.total || 0), 0);
-        const totalSurcharges = surcharges.reduce((sum, s) => sum + (s.amount || 0), 0);
+        const subtotal = docItems.reduce((sum, item) => sum + Number(item.total || 0), 0);
+        const totalSurcharges = surcharges.reduce((sum, s) => sum + Number(s.amount || 0), 0);
         const taxRate = 21.00; // Example tax rate
         const taxAmount = (subtotal + totalSurcharges) * (taxRate / 100);
         const total = subtotal + totalSurcharges + taxAmount;

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useData } from '../hooks/useData';
@@ -169,7 +170,7 @@ const InvoiceHistory = () => {
     }, [documents]);
 
     useEffect(() => {
-        const docIdToOpen = location.state?.openDocumentId;
+        const docIdToOpen = (location.state as any)?.openDocumentId;
         if (docIdToOpen) {
             const docToView = derivedDocuments.find(d => d.id === docIdToOpen);
             if (docToView) {
@@ -178,7 +179,7 @@ const InvoiceHistory = () => {
                 navigate(location.pathname, { replace: true, state: {} });
             }
         }
-    }, [location.state, derivedDocuments, navigate]);
+    }, [location.state, derivedDocuments, navigate, location.pathname]);
 
     const filteredDocuments = useMemo(() => {
         let docs = derivedDocuments;
