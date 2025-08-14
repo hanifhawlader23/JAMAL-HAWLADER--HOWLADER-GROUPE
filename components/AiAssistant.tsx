@@ -2,6 +2,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useData } from '../hooks/useData';
 
+const RenderContent = ({ content }: { content: string }) => {
+    const htmlContent = content
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^\* (.*$)/gm, '<li>$1</li>') // Handles lists
+        .replace(/(\r\n|\n|\r)/g, '<br />')
+        .replace(/<br \/><li>/g, '<li>')
+        .replace(/<\/li><br \/>/g, '</li>');
+
+    const wrappedInUl = htmlContent.includes('<li>') ? `<ul>${htmlContent.replace(/<\/li><li>/g, '</li></ul><ul><li>')}</ul>` : htmlContent;
+    return <div className="prose prose-sm prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: wrappedInUl }} />;
+};
+
+
 const AiAssistant = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [input, setInput] = useState('');
@@ -103,18 +116,6 @@ const AiAssistant = () => {
         }
     };
     
-    const renderContent = (content: string) => {
-        const htmlContent = content
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/^\* (.*$)/gm, '<li>$1</li>') // Handles lists
-            .replace(/(\r\n|\n|\r)/g, '<br />')
-            .replace(/<br \/><li>/g, '<li>')
-            .replace(/<\/li><br \/>/g, '</li>');
-
-        const wrappedInUl = `<ul>${htmlContent.replace(/<\/li><li>/g, '</li></ul><ul><li>')}</ul>`;
-        return <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: wrappedInUl }} />;
-    };
-
     return (
         <>
             <button
@@ -141,7 +142,7 @@ const AiAssistant = () => {
                                 <div key={index} className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                     {msg.role === 'model' && <div className="text-2xl">🤖</div>}
                                     <div className={`p-3 rounded-lg max-w-lg ${msg.role === 'user' ? 'bg-[var(--rose-gold-base)] text-white' : 'bg-[var(--charcoal-dark)]'}`} style={{'wordWrap': 'break-word'}}>
-                                      {renderContent(msg.content)}
+                                      <RenderContent content={msg.content} />
                                     </div>
                                 </div>
                             ))}

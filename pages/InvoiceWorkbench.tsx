@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useMemo, useRef } from 'react';
 import { useData } from '../hooks/useData';
 import { EntryStatus, PaymentStatus, DocumentItem, Surcharge, Document, DeliveryItem, Entry } from '../types';
@@ -14,7 +16,7 @@ declare var html2canvas: any;
 const InvoiceWorkbench = () => {
     const { entries, updateEntry, clients, deliveries, documents, addDocument, products } = useData();
     const [selectedClient, setSelectedClient] = useState('');
-    const [selectedEntries, setSelectedEntries] = useState(new Set<string>());
+    const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
     const [previewingDocument, setPreviewingDocument] = useState<Document | null>(null);
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -96,23 +98,23 @@ const InvoiceWorkbench = () => {
 
         const docItems: DocumentItem[] = [];
         const surcharges: Surcharge[] = [];
-        let specialClientSurchargeBase = 0;
-        let dynamicSurchargeBase = 0;
+        let specialClientSurchargeBase: number = 0;
+        let dynamicSurchargeBase: number = 0;
 
         entriesToInvoice.forEach(entry => {
             const entryDeliveries = deliveries.filter(d => d.entryCode === entry.code);
             entry.items.forEach(item => {
                 const product = products.find(p => p.id === item.productId);
                 
-                const priceValue = product ? Number(product.price) : 0;
+                const priceValue = product ? Number(product.price) || 0 : 0;
                 if (!product || isNaN(priceValue) || priceValue === 0) return;
 
-                const orderedQty = Object.values(item.sizeQuantities || {}).reduce((sum: number, q: number) => sum + (q || 0), 0);
+                const orderedQty = Object.values(item.sizeQuantities || {}).reduce((sum: number, q: unknown) => sum + (Number(q) || 0), 0);
                 
                 const deliveriesForItem = entryDeliveries.flatMap(d => d.items).filter(dItem => dItem.entryItemId === item.id);
                 
                 const deliveredQty = deliveriesForItem.reduce((sum: number, dItem: DeliveryItem) => {
-                    const itemQuantity = Object.values(dItem.sizeQuantities || {}).reduce((qSum: number, q: number) => qSum + (q || 0), 0);
+                    const itemQuantity = Object.values(dItem.sizeQuantities || {}).reduce((qSum: number, q: unknown) => qSum + (Number(q) || 0), 0);
                     return sum + itemQuantity;
                 }, 0);
 
@@ -166,7 +168,7 @@ const InvoiceWorkbench = () => {
                 amount: specialClientSurchargeBase * 0.10,
             });
         }
-
+        
         if (dynamicSurchargeBase > 0) {
             surcharges.push({
                 reason: `Recargo por cantidad (${percentNum}%) para pedidos ≤ ${thresholdNum} uds`,
@@ -175,8 +177,8 @@ const InvoiceWorkbench = () => {
         }
 
 
-        const subtotal = docItems.reduce<number>((sum, item) => sum + (item.total || 0), 0);
-        const totalSurcharges = surcharges.reduce<number>((sum, s) => sum + (s.amount || 0), 0);
+        const subtotal = docItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+        const totalSurcharges = surcharges.reduce((sum, s) => sum + s.amount, 0);
         const taxRate = 21.00; // Example tax rate
         const taxAmount = (subtotal + totalSurcharges) * (taxRate / 100);
         const total = subtotal + totalSurcharges + taxAmount;
@@ -187,7 +189,7 @@ const InvoiceWorkbench = () => {
             documentType: type,
             clientId: firstClientId,
             date: new Date().toISOString(),
-            entryIds: Array.from(selectedEntries),
+            entryIds: [...selectedEntries],
             items: docItems,
             subtotal,
             surcharges,
@@ -212,7 +214,7 @@ const InvoiceWorkbench = () => {
         const newStatus = newDocument.documentType === 'Factura' ? EntryStatus.INVOICED : EntryStatus.PRE_INVOICED;
 
         // Update entries in parallel
-        const updatePromises = newDocument.entryIds.map(entryId => 
+        const updatePromises = newDocument.entryIds.map((entryId: string) => 
             updateEntry(entryId, { status: newStatus, invoiceId: newDocument.id })
         );
         
@@ -223,14 +225,14 @@ const InvoiceWorkbench = () => {
     };
 
     const downloadPdf = (documentNumber: string) => {
-        const { jsPDF } = jspdf;
+        const { jsPDF: JSPDF } = jspdf;
         const input = printableRef.current;
         if (input) {
-            html2canvas(input, { scale: 3, useCORS: true }).then((canvas: any) => {
+            html2canvas(input, { scale: 3, useCORS: true }).then((canvas: HTMLCanvasElement) => {
                 const imgData = canvas.toDataURL('image/png');
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const pdf = new JSPDF('p', 'mm', 'a4');
+                const pdfWidth: number = pdf.internal.pageSize.getWidth();
+                const pdfHeight: number = pdf.internal.pageSize.getHeight();
                 
                 const imgHeight = canvas.height * pdfWidth / canvas.width;
                 let heightLeft = imgHeight;

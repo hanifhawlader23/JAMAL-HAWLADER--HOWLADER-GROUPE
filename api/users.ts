@@ -2,13 +2,12 @@ import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { Role } from '../../types';
-
-// A simple auth check placeholder; replace with your actual auth logic
-async function checkAuth(req: Request) { return true; }
+import { verifyAuth } from './lib/auth.js';
 
 export default async function POST(req: Request) {
-    if (!await checkAuth(req)) {
-        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    const authResult = await verifyAuth(req, [Role.ADMIN]);
+    if (authResult.error) {
+        return authResult.error;
     }
 
     try {

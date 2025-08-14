@@ -1,13 +1,14 @@
 import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
+import { verifyAuth } from './lib/auth.js';
+import { Role } from '../../types';
 
 export const runtime = 'edge';
 
-async function checkAuth(req: Request) { return true; }
-
 export default async function POST(req: Request) {
-    if (!await checkAuth(req)) {
-        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    const authResult = await verifyAuth(req, [Role.ADMIN]);
+    if (authResult.error) {
+        return authResult.error;
     }
 
     try {

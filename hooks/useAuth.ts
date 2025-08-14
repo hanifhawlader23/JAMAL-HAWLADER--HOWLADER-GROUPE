@@ -1,1 +1,1 @@
-// This file is intentionally left empty. The implementation is in hooks/useAuth.tsx to resolve module ambiguity.
+export * from './useAuth.tsx';

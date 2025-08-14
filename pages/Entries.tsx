@@ -12,12 +12,12 @@ import { useAuth } from '../hooks/useAuth.tsx';
 
 const STATUS_GROUPS_TO_DISPLAY = [EntryStatus.RECEIVED, EntryStatus.IN_PROCESS, EntryStatus.DELIVERED, EntryStatus.PRE_INVOICED];
 
-const getDeliveredQuantity = (entry, allDeliveries) => {
+const getDeliveredQuantity = (entry: Entry, allDeliveries: Delivery[]) => {
     if (!entry || !allDeliveries) return 0;
     return allDeliveries
         .filter(d => d.entryCode === entry.code)
         .flatMap(d => d.items)
-        .reduce((sum, item) => sum + Object.values(item.sizeQuantities).reduce((qSum: number, q: number) => qSum + (q || 0), 0), 0);
+        .reduce((sum, item) => sum + Object.values(item.sizeQuantities).reduce((qSum: number, q: unknown) => qSum + (Number(q) || 0), 0), 0);
 };
 
 const getLastDelivery = (entry, allDeliveries) => {
@@ -106,13 +106,13 @@ const Entries = () => {
     };
     
     const getClientName = (clientId) => clients.find(c => c.id === clientId)?.name || 'N/A';
-    const getTotalQuantity = (items: EntryItem[]) => items.reduce((sum, item) => sum + Object.values(item.sizeQuantities).reduce((qSum: number, q: number) => qSum + (q || 0), 0), 0);
+    const getTotalQuantity = (items: EntryItem[]) => items.reduce((sum, item) => sum + Object.values(item.sizeQuantities).reduce((qSum: number, q: unknown) => qSum + (Number(q) || 0), 0), 0);
     
     const getTotalPrice = (items: EntryItem[]) => {
       return items.reduce((sum, item) => {
           const product = products.find(p => p.id === item.productId);
           const price = product ? product.price : 0;
-          const itemQty = Object.values(item.sizeQuantities).reduce((qSum: number, q: number) => qSum + (q || 0), 0);
+          const itemQty = Object.values(item.sizeQuantities).reduce((qSum: number, q: unknown) => qSum + (Number(q) || 0), 0);
           return sum + (itemQty * price);
       }, 0);
     };
@@ -588,7 +588,7 @@ const EntryFormModal = ({ isOpen, onClose, entry }: { isOpen: boolean, onClose: 
                 {formData.items.map((item, index) => {
                     const product = products.find(p => p.id === item.productId);
                     const unitPrice = product?.price || 0;
-                    const totalQuantity = Object.values(item.sizeQuantities).reduce((sum: number, q: number) => sum + (q || 0), 0);
+                    const totalQuantity = Object.values(item.sizeQuantities).reduce((sum: number, q: unknown) => sum + (Number(q) || 0), 0);
                     const totalPrice = totalQuantity * unitPrice;
 
                     const showSurcharge = clientIsSpecial && totalQuantity > 0 && totalQuantity <= 20;
@@ -735,7 +735,7 @@ const DeliveryFormModal = ({ isOpen, onClose, entry }: { isOpen: boolean, onClos
     const [whoDelivered, setWhoDelivered] = useState('');
 
     const deliveredQuantities = useMemo(() => {
-        const quantities = {};
+        const quantities: { [key: string]: { [key: string]: number } } = {};
         deliveries
             .filter(d => d.entryCode === entry.code)
             .flatMap(d => d.items)
@@ -747,7 +747,7 @@ const DeliveryFormModal = ({ isOpen, onClose, entry }: { isOpen: boolean, onClos
                     if (Object.prototype.hasOwnProperty.call(item.sizeQuantities, size)) {
                         const qVal = item.sizeQuantities[size];
                         const currentVal = quantities[item.entryItemId][size];
-                        quantities[item.entryItemId][size] = (currentVal || 0) + qVal;
+                        quantities[item.entryItemId][size] = (currentVal || 0) + (Number(qVal) || 0);
                     }
                 }
             });
@@ -766,7 +766,7 @@ const DeliveryFormModal = ({ isOpen, onClose, entry }: { isOpen: boolean, onClos
             const product = products.find(p => p.id === entryItem.productId);
             const price = product?.price || 0;
 
-            const itemQuantity = Object.values(sizeQuantities).reduce((sum: number, q: number) => sum + (q || 0), 0);
+            const itemQuantity = Object.values(sizeQuantities).reduce((sum: number, q: unknown) => sum + (Number(q) || 0), 0);
             
             totalQuantity += itemQuantity;
             totalValue += itemQuantity * price;
@@ -815,7 +815,7 @@ const DeliveryFormModal = ({ isOpen, onClose, entry }: { isOpen: boolean, onClos
                 productId: entryItem.productId,
                 sizeQuantities: deliverySizes,
             };
-        }).filter((item) => item !== null);
+        }).filter((item): item is NonNullable<typeof item> => item !== null);
 
         if (newDeliveryItems.length === 0) {
             alert("No quantities were entered for delivery.");
@@ -837,11 +837,11 @@ const DeliveryFormModal = ({ isOpen, onClose, entry }: { isOpen: boolean, onClos
 
         const currentEntryDeliveries = allMyDeliveries.filter(d => d.entryCode === entry.code);
 
-        const totalOrdered = entry.items.reduce((sum, item) => sum + Object.values(item.sizeQuantities).reduce((qSum: number, q: number) => qSum + q, 0), 0);
+        const totalOrdered = entry.items.reduce((sum, item) => sum + Object.values(item.sizeQuantities).reduce((qSum: number, q: unknown) => qSum + (Number(q) || 0), 0), 0);
         
         const totalDelivered = currentEntryDeliveries
             .flatMap(d => d.items)
-            .reduce((sum, item) => sum + Object.values(item.sizeQuantities).reduce((qSum: number, q: number) => qSum + (q || 0), 0), 0);
+            .reduce((sum, item) => sum + Object.values(item.sizeQuantities).reduce((qSum: number, q: unknown) => qSum + (Number(q) || 0), 0), 0);
 
         let newStatus = entry.status;
         if (entry.status === EntryStatus.RECEIVED || entry.status === EntryStatus.IN_PROCESS) {
@@ -879,7 +879,7 @@ const DeliveryFormModal = ({ isOpen, onClose, entry }: { isOpen: boolean, onClos
                 {entry.items.map(item => {
                     const product = products.find(p => p.id === item.productId);
                     const deliveredForItem = deliveredQuantities[item.id] || {};
-                    const totalOrderedForItem = Object.values(item.sizeQuantities).reduce((sum: number, q: number) => sum + (q || 0), 0);
+                    const totalOrderedForItem = Object.values(item.sizeQuantities).reduce((sum: number, q: unknown) => sum + (Number(q) || 0), 0);
 
                     return (
                         <div key={item.id} className="p-4 border border-[var(--border-color)] rounded-md bg-black/20">
@@ -944,7 +944,7 @@ const EntryDetailsModal = ({ isOpen, onClose, entry, deliveries }: { isOpen: boo
     
     if (!entry) return null;
 
-    const getTotalQuantity = (item: EntryItem) => Object.values(item.sizeQuantities).reduce((sum: number, q: number) => sum + (q || 0), 0);
+    const getTotalQuantity = (item: EntryItem) => Object.values(item.sizeQuantities).reduce((sum: number, q: unknown) => sum + (Number(q) || 0), 0);
 
     const totalEntryQuantity = entry.items.reduce((sum, item) => sum + getTotalQuantity(item), 0);
     const totalEntryPrice = entry.items.reduce((sum, item) => {
@@ -982,7 +982,7 @@ const EntryDetailsModal = ({ isOpen, onClose, entry, deliveries }: { isOpen: boo
                         const deliveredQuantitiesForItem = entryDeliveries
                             .flatMap(d => d.items)
                             .filter(dItem => dItem.entryItemId === item.id)
-                            .reduce((sum, dItem) => sum + Object.values(dItem.sizeQuantities).reduce((qSum: number, q: number) => qSum + (q || 0), 0), 0);
+                            .reduce((sum, dItem) => sum + Object.values(dItem.sizeQuantities).reduce((qSum: number, q: unknown) => qSum + (Number(q) || 0), 0), 0);
                         
                         const pendingQuantitiesForItem = totalOrderedForItem - deliveredQuantitiesForItem;
 

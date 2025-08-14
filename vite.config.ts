@@ -1,5 +1,4 @@
 
-
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import type { Connect } from 'vite';
@@ -65,11 +64,15 @@ const apiPlugin = () => ({
           }
           res.end();
           return;
-        } catch (error) {
+        } catch (error: any) {
           console.error(`API handler error for ${req.url}:`, error);
           if (!res.headersSent) {
+            res.setHeader('Content-Type', 'application/json');
             res.statusCode = 500;
-            res.end('Internal Server Error. Check Vite console for details.');
+            res.end(JSON.stringify({ 
+                error: 'Internal Server Error. Check Vite console for details.',
+                details: error.message 
+            }));
           }
           return;
         }

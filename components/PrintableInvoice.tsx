@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { Document, EntryStatus } from '../types';
 import { useData } from '../hooks/useData';
 
@@ -7,19 +7,23 @@ interface PrintableInvoiceProps {
     logoSize: number;
 }
 
-const PrintableInvoice = React.forwardRef<HTMLDivElement, PrintableInvoiceProps>(({ document, logoSize }, ref) => {
+const PrintableInvoice = forwardRef<HTMLDivElement, PrintableInvoiceProps>(function PrintableInvoice({ document, logoSize }, ref) {
     const { companyDetails, clients } = useData();
     const client = clients.find(c => c.id === document.clientId);
 
-    // Sort items by entry code numerically
-    const sortedItems = [...document.items].sort((a, b) => 
+    // Sort items by entry code numerically, safely handling potentially null/undefined items array
+    const sortedItems = [...(document.items || [])].sort((a, b) => 
         a.entryCode.localeCompare(b.entryCode, undefined, { numeric: true })
     );
 
     // Formats date as DD/MM/YYYY
     const formatDisplayDate = (dateString?: string) => {
         if (!dateString) return 'N/A';
-        return new Date(dateString).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        try {
+            return new Date(dateString).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        } catch (e) {
+            return 'Invalid Date';
+        }
     };
 
     const statusDisplay: { [key in EntryStatus]: { text: string; bg: string; color: string } } = {
@@ -42,8 +46,8 @@ const PrintableInvoice = React.forwardRef<HTMLDivElement, PrintableInvoiceProps>
     });
     
     // --- New logic for totals ---
-    const totalSurcharges = document.surcharges.reduce((sum, s) => sum + s.amount, 0);
-    const suma = document.subtotal + totalSurcharges;
+    const totalSurcharges = Array.isArray(document.surcharges) ? document.surcharges.reduce((sum, s) => sum + s.amount, 0) : 0;
+    const suma = (document.subtotal || 0) + totalSurcharges;
 
 
     return (
@@ -282,23 +286,23 @@ const PrintableInvoice = React.forwardRef<HTMLDivElement, PrintableInvoiceProps>
                                     <td style={{ color: '#8D5B5B', fontWeight: 'bold' }}>{item.entryCode}</td>
                                     <td>{item.reference}</td>
                                     <td className="text-left">{item.description}</td>
-                                    <td>{item.orderedQty.toLocaleString('de-DE')}</td>
-                                    <td className="font-semibold">{item.deliveredQty.toLocaleString('de-DE')}</td>
-                                    <td className={`font-bold ${item.pendingQty > 0 ? 'text-red-600' : ''}`}>{item.pendingQty > 0 ? item.pendingQty.toLocaleString('de-DE') : '-'}</td>
+                                    <td>{Number(item.orderedQty || 0).toLocaleString('de-DE')}</td>
+                                    <td className="font-semibold">{Number(item.deliveredQty || 0).toLocaleString('de-DE')}</td>
+                                    <td className={`font-bold ${item.pendingQty > 0 ? 'text-red-600' : ''}`}>{item.pendingQty > 0 ? Number(item.pendingQty || 0).toLocaleString('de-DE') : '-'}</td>
                                     <td>
                                         {formatDisplayDate(item.lastDeliveryDate)}
-                                        <div className="text-[10px] text-gray-500">({item.deliveredQty} pcs)</div>
+                                        <div className="text-[10px] text-gray-500">({Number(item.deliveredQty || 0)} pcs)</div>
                                     </td>
                                     <td>
                                         <span 
                                             className="status-pill"
                                             style={{ backgroundColor: statusDisplay[item.status]?.bg, color: statusDisplay[item.status]?.color }}
                                         >
-                                            {statusDisplay[item.status]?.text}
+                                            {statusDisplay[item.status]?.text || item.status}
                                         </span>
                                     </td>
-                                    <td className="text-right">{item.unitPrice.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</td>
-                                    <td className="text-right font-semibold">{item.total.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</td>
+                                    <td className="text-right">{Number(item.unitPrice || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</td>
+                                    <td className="text-right font-semibold">{Number(item.total || 0).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -309,27 +313,27 @@ const PrintableInvoice = React.forwardRef<HTMLDivElement, PrintableInvoiceProps>
                     <div className="totals-card">
                         <div className="flex justify-between py-1.5 border-b border-dashed border-gray-400">
                             <span className="font-semibold">Subtotal:</span>
-                            <span>{document.subtotal.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
+                            <span>{Number(document.subtotal || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
                         </div>
-                        {document.surcharges && document.surcharges.map((surcharge, index) => (
+                        {Array.isArray(document.surcharges) && document.surcharges.map((surcharge, index) => (
                             <div key={index} className="flex justify-between py-1.5 border-b border-dashed border-gray-400">
                                 <span className="font-semibold">{surcharge.reason}:</span>
-                                <span>{surcharge.amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
+                                <span>{Number(surcharge.amount || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
                             </div>
                         ))}
                         {totalSurcharges > 0 && (
                             <div className="flex justify-between py-1.5 border-b border-solid border-gray-400 font-bold mt-1">
                                 <span className="font-semibold">Suma:</span>
-                                <span>{suma.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
+                                <span>{Number(suma || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
                             </div>
                         )}
                         <div className="flex justify-between py-1.5 border-b border-dashed border-gray-400">
-                            <span className="font-semibold">IVA ({document.taxRate.toLocaleString('de-DE')} %):</span>
-                            <span>{document.taxAmount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
+                            <span className="font-semibold">IVA ({Number(document.taxRate || 0).toLocaleString('de-DE')} %):</span>
+                            <span>{Number(document.taxAmount || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
                         </div>
                         <div className="flex justify-between py-2.5 mt-2 total-row">
                             <span className="font-bold">TOTAL:</span>
-                            <span className="font-bold">{document.total.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
+                            <span className="font-bold">{Number(document.total || 0).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
                         </div>
                     </div>
                 </footer>

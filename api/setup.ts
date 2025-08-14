@@ -4,6 +4,14 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 
 export default async function GET(request: Request) {
+  // Explicitly check for the database connection URL to prevent crashes.
+  if (!process.env.POSTGRES_URL) {
+    return NextResponse.json(
+      { error: "Database connection string is not configured. Please set the POSTGRES_URL environment variable in your Vercel project settings." },
+      { status: 500 }
+    );
+  }
+
   try {
     let result;
     
@@ -129,6 +137,7 @@ export default async function GET(request: Request) {
     return NextResponse.json(result, { status: 200 });
 
   } catch (error: any) {
+    console.error("Database setup error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
