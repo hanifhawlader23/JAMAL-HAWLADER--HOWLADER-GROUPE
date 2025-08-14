@@ -1,14 +1,4 @@
 
-
-
-
-
-
-
-
-
-
-
 import React, { useState, useMemo, useRef } from 'react';
 import { useData } from '../hooks/useData';
 import { EntryStatus, PaymentStatus, DocumentItem, Surcharge, Document, DeliveryItem, Entry } from '../types';
@@ -116,12 +106,12 @@ const InvoiceWorkbench = () => {
                 const priceValue = product ? Number(product.price) || 0 : 0;
                 if (!product || isNaN(priceValue) || priceValue === 0) return;
 
-                const orderedQty = Object.values(item.sizeQuantities || {}).reduce((sum, q) => sum + (Number(q) || 0), 0);
+                const orderedQty = Object.values(item.sizeQuantities || {}).reduce((sum: number, q: unknown) => sum + (Number(q) || 0), 0);
                 
                 const deliveriesForItem = entryDeliveries.flatMap(d => d.items).filter(dItem => dItem.entryItemId === item.id);
                 
-                const deliveredQty = deliveriesForItem.reduce((sum, dItem: DeliveryItem) => {
-                    const itemQuantity = Object.values(dItem.sizeQuantities || {}).reduce((qSum, q) => qSum + (Number(q) || 0), 0);
+                const deliveredQty = deliveriesForItem.reduce((sum: number, dItem: DeliveryItem) => {
+                    const itemQuantity = Object.values(dItem.sizeQuantities || {}).reduce((qSum: number, q: unknown) => qSum + (Number(q) || 0), 0);
                     return sum + itemQuantity;
                 }, 0);
 
@@ -185,7 +175,7 @@ const InvoiceWorkbench = () => {
 
 
         const subtotal = docItems.reduce((sum: number, item: DocumentItem) => sum + (Number(item.total) || 0), 0);
-        const totalSurcharges = surcharges.reduce((sum, s) => sum + Number(s.amount || 0), 0);
+        const totalSurcharges = surcharges.reduce((sum: number, s: Surcharge) => sum + Number(s.amount || 0), 0);
         const taxRate = 21.00; // Example tax rate
         const taxAmount = (subtotal + totalSurcharges) * (taxRate / 100);
         const total = subtotal + totalSurcharges + taxAmount;

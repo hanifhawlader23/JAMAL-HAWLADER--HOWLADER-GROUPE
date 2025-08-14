@@ -1,6 +1,4 @@
-
 import { sql } from '@vercel/postgres';
-import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { parse } from 'cookie';
 
@@ -19,7 +17,7 @@ async function verifyAuth(req: Request) {
 export default async function GET(request: Request) {
     const auth = await verifyAuth(request);
     if (!auth) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
 
     try {
@@ -43,7 +41,7 @@ export default async function GET(request: Request) {
             sql`SELECT id, username, role, full_name FROM users WHERE id = ${auth.userId}`,
         ]);
 
-        return NextResponse.json({
+        return new Response(JSON.stringify({
             users: users.rows,
             clients: clients.rows,
             products: products.rows,
@@ -52,8 +50,8 @@ export default async function GET(request: Request) {
             documents: documents.rows,
             companyDetails: companyDetails.rows[0] || null,
             currentUser: currentUser.rows[0] || null,
-        });
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
 }

@@ -1,9 +1,13 @@
 import { sql } from '@vercel/postgres';
-import { NextResponse } from 'next/server';
 import { verifyAuth } from './lib/auth.ts';
 import { Role } from '../../types.ts';
 
 export const runtime = 'edge';
+
+const jsonResponse = (data: any, status: number = 200) => new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+});
 
 export default async function POST(req: Request) {
     const authResult = await verifyAuth(req, [Role.ADMIN]);
@@ -26,7 +30,7 @@ export default async function POST(req: Request) {
                     )
                     RETURNING *;
                 `;
-                return NextResponse.json(rows[0]);
+                return jsonResponse(rows[0]);
             }
             case 'update': {
                 const { id, payments, paymentStatus } = payload;
@@ -36,17 +40,17 @@ export default async function POST(req: Request) {
                     WHERE id = ${id}
                     RETURNING *;
                 `;
-                return NextResponse.json(rows[0]);
+                return jsonResponse(rows[0]);
             }
             case 'delete': {
                 const { id } = payload;
                 await sql`DELETE FROM documents WHERE id = ${id};`;
-                return NextResponse.json({ message: 'Document deleted successfully' });
+                return jsonResponse({ message: 'Document deleted successfully' });
             }
             default:
-                return NextResponse.json({ message: `Unknown action: ${action}` }, { status: 400 });
+                return jsonResponse({ message: `Unknown action: ${action}` }, 400);
         }
     } catch (error: any) {
-        return NextResponse.json({ message: error.message }, { status: 500 });
+        return jsonResponse({ message: error.message }, 500);
     }
 }

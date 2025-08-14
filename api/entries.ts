@@ -1,8 +1,12 @@
 import { sql } from '@vercel/postgres';
-import { NextResponse } from 'next/server';
 import { verifyAuth } from './lib/auth.ts';
 
 export const runtime = 'edge';
+
+const jsonResponse = (data: any, status: number = 200) => new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+});
 
 export default async function POST(req: Request) {
     const authResult = await verifyAuth(req);
@@ -21,17 +25,17 @@ export default async function POST(req: Request) {
                     VALUES (${code}, ${date}, ${clientId}, ${whoInput}, ${status}, ${JSON.stringify(items)})
                     RETURNING *;
                 `;
-                return NextResponse.json(rows[0]);
+                return jsonResponse(rows[0]);
             }
             case 'update': {
                 const { id, ...updates } = payload;
                 if (!id) {
-                    return NextResponse.json({ message: 'Entry ID is required for update' }, { status: 400 });
+                    return jsonResponse({ message: 'Entry ID is required for update' }, 400);
                 }
 
                 const { rows: existingRows } = await sql`SELECT * FROM entries WHERE id = ${id};`;
                 if (existingRows.length === 0) {
-                    return NextResponse.json({ message: 'Entry not found' }, { status: 404 });
+                    return jsonResponse({ message: 'Entry not found' }, 404);
                 }
                 const existingEntry = existingRows[0];
 
@@ -61,18 +65,18 @@ export default async function POST(req: Request) {
                     RETURNING *;
                 `;
                 
-                return NextResponse.json(rows[0]);
+                return jsonResponse(rows[0]);
             }
             case 'delete': {
                 const { id } = payload;
                 await sql`DELETE FROM entries WHERE id = ${id};`;
-                return NextResponse.json({ message: 'Entry deleted successfully' });
+                return jsonResponse({ message: 'Entry deleted successfully' });
             }
             default:
-                return NextResponse.json({ message: `Unknown action: ${action}` }, { status: 400 });
+                return jsonResponse({ message: `Unknown action: ${action}` }, 400);
         }
     } catch (error: any) {
         console.error('API Error in entries.ts:', error);
-        return NextResponse.json({ message: error.message }, { status: 500 });
+        return jsonResponse({ message: error.message }, 500);
     }
 }

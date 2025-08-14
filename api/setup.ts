@@ -1,14 +1,12 @@
-
 import { sql } from '@vercel/postgres';
-import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 
 export default async function GET(request: Request) {
   // Explicitly check for the database connection URL to prevent crashes.
   if (!process.env.POSTGRES_URL) {
-    return NextResponse.json(
-      { error: "Database connection string is not configured. Please set the POSTGRES_URL environment variable in your Vercel project settings." },
-      { status: 500 }
+    return new Response(
+      JSON.stringify({ error: "Database connection string is not configured. Please set the POSTGRES_URL environment variable in your Vercel project settings." }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
@@ -136,10 +134,10 @@ export default async function GET(request: Request) {
     `;
 
     result = { message: "Database tables created and seeded with admin users successfully." };
-    return NextResponse.json(result, { status: 200 });
+    return new Response(JSON.stringify(result), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: any) {
     console.error("Database setup error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 }

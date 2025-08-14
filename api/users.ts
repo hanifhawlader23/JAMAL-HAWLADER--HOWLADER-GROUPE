@@ -1,10 +1,14 @@
 import { sql } from '@vercel/postgres';
-import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { Role } from '../../types.ts';
 import { verifyAuth } from './lib/auth.ts';
 
 export const runtime = 'edge';
+
+const jsonResponse = (data: any, status: number = 200) => new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+});
 
 export default async function POST(req: Request) {
     const authResult = await verifyAuth(req, [Role.ADMIN]);
@@ -19,7 +23,7 @@ export default async function POST(req: Request) {
             case 'create': {
                 const { fullName, username, password, role } = payload;
                 if (!fullName || !username || !password || !role) {
-                    return NextResponse.json({ message: 'Missing required fields for user creation' }, { status: 400 });
+                    return jsonResponse({ message: 'Missing required fields for user creation' }, 400);
                 }
                 const hashedPassword = await bcrypt.hash(password, 10);
                 const { rows } = await sql`
@@ -27,12 +31,12 @@ export default async function POST(req: Request) {
                     VALUES (${fullName}, ${username.toLowerCase()}, ${hashedPassword}, ${role})
                     RETURNING id, full_name, username, role;
                 `;
-                return NextResponse.json(rows[0]);
+                return jsonResponse(rows[0]);
             }
             case 'update': {
                 const { id, fullName, username, role, password } = payload;
                 if (!id) {
-                    return NextResponse.json({ message: 'User ID is required for update' }, { status: 400 });
+                    return jsonResponse({ message: 'User ID is required for update' }, 400);
                 }
                 
                 let result;
@@ -53,20 +57,20 @@ export default async function POST(req: Request) {
                     `;
                 }
                 
-                return NextResponse.json(result.rows[0]);
+                return jsonResponse(result.rows[0]);
             }
             case 'delete': {
                 const { id } = payload;
                  if (!id) {
-                    return NextResponse.json({ message: 'User ID is required for deletion' }, { status: 400 });
+                    return jsonResponse({ message: 'User ID is required for deletion' }, 400);
                 }
                 await sql`DELETE FROM users WHERE id = ${id};`;
-                return NextResponse.json({ message: 'User deleted successfully' });
+                return jsonResponse({ message: 'User deleted successfully' });
             }
             default:
-                return NextResponse.json({ message: `Unknown action: ${action}` }, { status: 400 });
+                return jsonResponse({ message: `Unknown action: ${action}` }, 400);
         }
     } catch (error: any) {
-        return NextResponse.json({ message: error.message }, { status: 500 });
+        return jsonResponse({ message: error.message }, 500);
     }
 }

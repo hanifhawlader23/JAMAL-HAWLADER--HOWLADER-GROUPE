@@ -1,29 +1,28 @@
 import { put } from '@vercel/blob';
-import { NextResponse } from 'next/server';
 import { verifyAuth } from './lib/auth.ts';
 
 export const runtime = 'edge';
 
-export default async function POST(request: Request): Promise<NextResponse> {
+export default async function POST(request: Request): Promise<Response> {
   const authResult = await verifyAuth(request);
   if (authResult.error) {
-      return authResult.error as NextResponse;
+      return authResult.error as Response;
   }
   
   const { searchParams } = new URL(request.url);
   const filename = searchParams.get('filename');
 
   if (!filename) {
-    return NextResponse.json({ message: 'Filename is required' }, { status: 400 });
+    return new Response(JSON.stringify({ message: 'Filename is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
   if (!request.body) {
-    return NextResponse.json({ message: 'Request body is required for upload' }, { status: 400 });
+    return new Response(JSON.stringify({ message: 'Request body is required for upload' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
   
   const blob = await put(filename, request.body, {
     access: 'public',
   });
 
-  return NextResponse.json(blob);
+  return new Response(JSON.stringify(blob), { status: 200, headers: { 'Content-Type': 'application/json' } });
 }

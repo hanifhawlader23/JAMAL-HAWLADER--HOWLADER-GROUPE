@@ -1,8 +1,12 @@
 import { sql } from '@vercel/postgres';
-import { NextResponse } from 'next/server';
 import { verifyAuth } from './lib/auth.ts';
 
 export const runtime = 'edge';
+
+const jsonResponse = (data: any, status: number = 200) => new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+});
 
 export default async function POST(req: Request) {
     const authResult = await verifyAuth(req);
@@ -21,13 +25,13 @@ export default async function POST(req: Request) {
                     VALUES (${entryCode}, ${deliveryDate}, ${whoDelivered}, ${JSON.stringify(items)})
                     RETURNING *;
                 `;
-                return NextResponse.json(rows[0]);
+                return jsonResponse(rows[0]);
             }
             // Add update/delete for deliveries if needed later
             default:
-                return NextResponse.json({ message: `Unknown action: ${action}` }, { status: 400 });
+                return jsonResponse({ message: `Unknown action: ${action}` }, 400);
         }
     } catch (error: any) {
-        return NextResponse.json({ message: error.message }, { status: 500 });
+        return jsonResponse({ message: error.message }, 500);
     }
 }
