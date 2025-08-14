@@ -1,31 +1,27 @@
-
-
-import { sql } from '@vercel/postgres';
-import jwt from 'jsonwebtoken';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { parse } from 'cookie';
+import { sql } from '../_lib/db.js';
 
-export const runtime = 'edge';
-
-export default async function GET(req: Request) {
-  const cookies = parse(req.headers.get('Cookie') || '');
-  const token = cookies.token;
-
-  if (!token) {
-    return new Response(JSON.stringify({ message: 'Not authenticated' }), { status: 401 });
-  }
-
+// Returns the raw User object the frontend expects
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
-    
-    const { rows } = await sql`SELECT id, username, role, full_name FROM users WHERE id = ${decoded.userId}`;
-    const user = rows[0];
+    const rawCookie = (req.headers as any)?.cookie ?? ((req as any)?.headers?.get?.('cookie')) ?? '';
+    const cookies = parse(rawCookie);
+    const email = cookies['session_email'];
+    if (!email) return res.status(401).end();
 
-    if (!user) {
-      return new Response(JSON.stringify({ message: 'User not found' }), { status: 404 });
-    }
+    const rows: any[] = await sql`select id, email, role, coalesce(name, '') as name from users where lower(email)=lower(${email}) limit 1;`;
+    if (!rows.length) return res.status(401).end();
+    const row = rows[0];
 
-    return new Response(JSON.stringify(user), { status: 200 });
-  } catch (error) {
-    return new Response(JSON.stringify({ message: 'Invalid token' }), { status: 401 });
+    const user = {
+      id: String(row.id),
+      username: String(row.email),
+      role: String(row.role),
+      fullName: String(row.name || '')
+    };
+    return res.status(200).json(user);
+  } catch (e) {
+    return res.status(500).json({ error: String(e) });
   }
 }

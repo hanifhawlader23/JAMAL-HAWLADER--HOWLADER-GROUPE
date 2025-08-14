@@ -1,56 +1,45 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { sql } from '../_lib/db.js';
 
-
-import { sql } from '@vercel/postgres';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { serialize } from 'cookie';
-import { Role } from '../../types';
-
-export const runtime = 'edge';
-
-export default async function POST(req: Request) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') return res.status(405).end();
   try {
-    const { fullName, username, password } = await req.json();
+    const body = (req.body ?? {}) as any;
+    const userEmail = String(body.username ?? body.email ?? '').toLowerCase();
+    const password  = String(body.password ?? '');
+    const fullName  = body.fullName ? String(body.fullName) : null;
 
-    if (!fullName || !username || !password) {
-      return new Response(JSON.stringify({ message: 'All fields are required' }), { status: 400 });
-    }
+    if (!userEmail || !password) return res.status(400).json({ message: 'missing_fields' });
 
-    const { rows: existingUsers } = await sql`SELECT * FROM users WHERE username = ${username.toLowerCase()}`;
-    if (existingUsers.length > 0) {
-      return new Response(JSON.stringify({ message: 'A user with this email already exists.' }), { status: 409 });
-    }
+    await sql`create extension if not exists pgcrypto;`;
+    await sql`
+      create table if not exists users(
+        id uuid primary key default gen_random_uuid(),
+        email text unique not null,
+        password_hash text not null,
+        name text,
+        role text not null default 'user' check (role in ('user','admin')),
+        is_active boolean not null default true,
+        created_at timestamptz default now()
+      );`;
+    await sql`create unique index if not exists users_email_lower_idx on users (lower(email));`;
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    const { rows } = await sql`
-      INSERT INTO users (full_name, username, password, role)
-      VALUES (${fullName}, ${username.toLowerCase()}, ${hashedPassword}, ${Role.USER})
-      RETURNING id, full_name, username, role;
-    `;
-    const newUser = rows[0];
+    const rows = await sql`
+      insert into users (email, password_hash, name)
+      values (lower(${userEmail}), crypt(${password}, gen_salt('bf')), ${fullName})
+      on conflict (email) do nothing
+      returning id, email, role, coalesce(name, '') as name;`;
+    if (!rows.length) return res.status(409).json({ message: 'email_exists' });
 
-    const token = jwt.sign(
-      { userId: newUser.id, role: newUser.role },
-      process.env.JWT_SECRET as string,
-      { expiresIn: '7d' }
-    );
-
-    const cookie = serialize('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV !== 'development',
-      sameSite: 'strict',
-      maxAge: 60 * 60 * 24 * 7, // 1 week
-      path: '/',
-    });
-    
-    return new Response(JSON.stringify({ user: newUser }), {
-      status: 201,
-      headers: { 'Set-Cookie': cookie },
-    });
-
-  } catch (error: any) {
-    console.error(error);
-    return new Response(JSON.stringify({ message: 'Internal Server Error' }), { status: 500 });
+    const row = rows[0];
+    const user = {
+      id: String(row.id),
+      username: String(row.email),
+      role: String(row.role),
+      fullName: String(row.name || '')
+    };
+    return res.status(201).json({ user });
+  } catch (e) {
+    return res.status(500).json({ message: String(e) });
   }
 }

@@ -1,55 +1,39 @@
-
-
-import { sql } from '@vercel/postgres';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { serialize } from 'cookie';
+import { sql } from '../_lib/db.js';
 
-export const runtime = 'edge';
-
-export default async function POST(req: Request) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') return res.status(405).end();
   try {
-    const { username, password } = await req.json();
+    const body = (req.body ?? {}) as any;
+    const userEmail = String(body.username ?? body.email ?? '').toLowerCase();
+    const password  = String(body.password ?? '');
+    if (!userEmail || !password) return res.status(400).json({ message: 'missing_fields' });
 
-    if (!username || !password) {
-      return new Response(JSON.stringify({ message: 'Username and password are required' }), { status: 400 });
-    }
+    const rows: any[] = await sql`
+      select id, email, role, coalesce(name, '') as name
+      from users
+      where lower(email)=lower(${userEmail})
+        and is_active=true
+        and password_hash = crypt(${password}, password_hash)
+      limit 1;`;
+    if (!rows.length) return res.status(401).json({ message: 'invalid_credentials' });
 
-    const { rows } = await sql`SELECT * FROM users WHERE username = ${username.toLowerCase()}`;
-    const user = rows[0];
+    const row = rows[0];
+    // set cookies for session
+    res.setHeader('Set-Cookie', [
+      serialize('session_email', String(row.email), { httpOnly:true, secure:true, sameSite:'strict', path:'/', maxAge:60*60*24*7 }),
+    ]);
 
-    if (!user) {
-      return new Response(JSON.stringify({ message: 'Invalid email or password.' }), { status: 401 });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return new Response(JSON.stringify({ message: 'Invalid email or password.' }), { status: 401 });
-    }
-
-    const token = jwt.sign(
-      { userId: user.id, role: user.role },
-      process.env.JWT_SECRET as string,
-      { expiresIn: '7d' }
-    );
-
-    const cookie = serialize('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV !== 'development',
-      sameSite: 'strict',
-      maxAge: 60 * 60 * 24 * 7, // 1 week
-      path: '/',
-    });
-
-    const { password: _, ...userWithoutPassword } = user;
-
-    return new Response(JSON.stringify({ user: userWithoutPassword }), {
-      status: 200,
-      headers: { 'Set-Cookie': cookie },
-    });
-
-  } catch (error: any) {
-    console.error(error);
-    return new Response(JSON.stringify({ message: 'Internal Server Error' }), { status: 500 });
+    // return the exact shape the app expects
+    const user = {
+      id: String(row.id),
+      username: String(row.email),
+      role: String(row.role),
+      fullName: String(row.name || '')
+    };
+    return res.status(200).json({ user });
+  } catch (e) {
+    return res.status(500).json({ message: String(e) });
   }
 }
