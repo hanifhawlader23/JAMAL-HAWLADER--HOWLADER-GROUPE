@@ -1,56 +1,9 @@
-import { sql } from '@vercel/postgres';
-import { verifyAuth } from './lib/auth';
-import { Role } from '../../types';
-
-export const runtime = 'edge';
-
-const jsonResponse = (data: any, status: number = 200) => new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-});
-
-export default async function POST(req: Request) {
-    const authResult = await verifyAuth(req, [Role.ADMIN]);
-    if (authResult.error) {
-        return authResult.error;
-    }
-
-    try {
-        const { action, payload } = await req.json();
-
-        switch (action) {
-            case 'create': {
-                const { documentNumber, documentType, clientId, date, entryIds, items, subtotal, surcharges, taxRate, taxAmount, total, paymentStatus, payments, invoicePeriodStart, invoicePeriodEnd } = payload;
-                const { rows } = await sql`
-                    INSERT INTO documents (document_number, document_type, client_id, date, entry_ids, items, subtotal, surcharges, tax_rate, tax_amount, total, payment_status, payments, invoice_period_start, invoice_period_end)
-                    VALUES (
-                        ${documentNumber}, ${documentType}, ${clientId}, ${date}, ${entryIds}, ${JSON.stringify(items)}, 
-                        ${subtotal}, ${JSON.stringify(surcharges)}, ${taxRate}, ${taxAmount}, ${total}, 
-                        ${paymentStatus}, ${JSON.stringify(payments)}, ${invoicePeriodStart}, ${invoicePeriodEnd}
-                    )
-                    RETURNING *;
-                `;
-                return jsonResponse(rows[0]);
-            }
-            case 'update': {
-                const { id, payments, paymentStatus } = payload;
-                 const { rows } = await sql`
-                    UPDATE documents
-                    SET payments = ${JSON.stringify(payments)}, payment_status = ${paymentStatus}
-                    WHERE id = ${id}
-                    RETURNING *;
-                `;
-                return jsonResponse(rows[0]);
-            }
-            case 'delete': {
-                const { id } = payload;
-                await sql`DELETE FROM documents WHERE id = ${id};`;
-                return jsonResponse({ message: 'Document deleted successfully' });
-            }
-            default:
-                return jsonResponse({ message: `Unknown action: ${action}` }, 400);
-        }
-    } catch (error: any) {
-        return jsonResponse({ message: error.message }, 500);
-    }
-}
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { sql } from './_lib/db.js';
+async function ensure(){ await sql`create table if not exists documents( id uuid primary key default gen_random_uuid(), client_id uuid references clients(id) on delete set null, code text unique, date date default current_date, subtotal numeric(12,2) default 0, vat numeric(12,2) default 0, total numeric(12,2) default 0, created_at timestamptz default now() );`; }
+export default async function handler(req: VercelRequest, res: VercelResponse){ await ensure(); const {method, query}=req;
+  if(method==='GET'){ if(query.id){ const r:any[] = await sql`select * from documents where id=${String(query.id)} limit 1;`; return res.status(200).json(r[0]??null);} const rows:any[] = await sql`select * from documents order by date desc, created_at desc limit 200;`; return res.status(200).json(rows); }
+  if(method==='POST'){ const b=(req.body??{}) as any; const r:any[] = await sql`insert into documents(client_id, code, date, subtotal, vat, total) values (${b.client_id??null}, ${b.code??null}, ${b.date??null}, ${b.subtotal??0}, ${b.vat??0}, ${b.total??0}) returning *;`; return res.status(201).json(r[0]); }
+  if(method==='PUT'){ const b=(req.body??{}) as any; if(!b.id) return res.status(400).json({message:'missing id'}); const r:any[] = await sql`update documents set client_id=${b.client_id??null}, code=${b.code??null}, date=${b.date??null}, subtotal=${b.subtotal??0}, vat=${b.vat??0}, total=${b.total??0} where id=${b.id} returning *;`; return res.status(200).json(r[0]); }
+  if(method==='DELETE'){ const id=String((req.query.id ?? (req.body as any)?.id) ?? ''); if(!id) return res.status(400).json({message:'missing id'}); await sql`delete from documents where id=${id}`; return res.status(200).json({ok:true}); }
+  return res.status(405).end(); }

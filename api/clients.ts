@@ -1,52 +1,9 @@
-import { sql } from '@vercel/postgres';
-import { verifyAuth } from './lib/auth';
-import { Role } from '../../types';
-
-export const runtime = 'edge';
-
-const jsonResponse = (data: any, status: number = 200) => new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-});
-
-export default async function POST(req: Request) {
-    const authResult = await verifyAuth(req, [Role.ADMIN]);
-    if (authResult.error) {
-        return authResult.error;
-    }
-
-    try {
-        const { action, payload } = await req.json();
-
-        switch (action) {
-            case 'create': {
-                const { name, address, email, phone, vatNumber, logoUrl } = payload;
-                const { rows } = await sql`
-                    INSERT INTO clients (name, address, email, phone, vat_number, logo_url)
-                    VALUES (${name}, ${address}, ${email}, ${phone}, ${vatNumber}, ${logoUrl})
-                    RETURNING *;
-                `;
-                return jsonResponse(rows[0]);
-            }
-            case 'update': {
-                const { id, name, address, email, phone, vatNumber, logoUrl } = payload;
-                const { rows } = await sql`
-                    UPDATE clients
-                    SET name = ${name}, address = ${address}, email = ${email}, phone = ${phone}, vat_number = ${vatNumber}, logo_url = ${logoUrl}
-                    WHERE id = ${id}
-                    RETURNING *;
-                `;
-                return jsonResponse(rows[0]);
-            }
-            case 'delete': {
-                const { id } = payload;
-                await sql`DELETE FROM clients WHERE id = ${id};`;
-                return jsonResponse({ message: 'Client deleted successfully' });
-            }
-            default:
-                return jsonResponse({ message: `Unknown action: ${action}` }, 400);
-        }
-    } catch (error: any) {
-        return jsonResponse({ message: error.message }, 500);
-    }
-}
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { sql } from './_lib/db.js';
+async function ensure(){ await sql`create table if not exists clients( id uuid primary key default gen_random_uuid(), name text not null, email text, phone text, address text, nif text, created_at timestamptz default now() );`; await sql`create index if not exists clients_name_idx on clients (lower(name));`; }
+export default async function handler(req: VercelRequest, res: VercelResponse){ await ensure(); const {method, query}=req;
+  if(method==='GET'){ if(query.id){ const r:any[] = await sql`select * from clients where id=${String(query.id)} limit 1;`; return res.status(200).json(r[0]??null);} const q=query.q?`%${String(query.q).toLowerCase()}%`:null; let rows:any[]; if(q) rows = await sql`select * from clients where lower(name) like ${q} order by created_at desc limit 200;`; else rows = await sql`select * from clients order by created_at desc limit 200;`; return res.status(200).json(rows); }
+  if(method==='POST'){ const b=(req.body??{}) as any; const r:any[] = await sql`insert into clients(name,email,phone,address,nif) values (${b.name}, ${b.email??null}, ${b.phone??null}, ${b.address??null}, ${b.nif??null}) returning *;`; return res.status(201).json(r[0]); }
+  if(method==='PUT'){ const b=(req.body??{}) as any; if(!b.id) return res.status(400).json({message:'missing id'}); const r:any[] = await sql`update clients set name=${b.name}, email=${b.email??null}, phone=${b.phone??null}, address=${b.address??null}, nif=${b.nif??null} where id=${b.id} returning *;`; return res.status(200).json(r[0]); }
+  if(method==='DELETE'){ const id=String((req.query.id ?? (req.body as any)?.id) ?? ''); if(!id) return res.status(400).json({message:'missing id'}); await sql`delete from clients where id=${id}`; return res.status(200).json({ok:true}); }
+  return res.status(405).end(); }

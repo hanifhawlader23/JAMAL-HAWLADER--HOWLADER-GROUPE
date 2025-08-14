@@ -1,0 +1,12 @@
+create extension if not exists pgcrypto;
+create table if not exists users ( id uuid primary key default gen_random_uuid(), email text unique not null, password_hash text not null, name text, role text not null default 'user' check (role in ('user','admin')), is_active boolean not null default true, created_at timestamptz default now() );
+create unique index if not exists users_email_lower_idx on users (lower(email));
+create table if not exists clients( id uuid primary key default gen_random_uuid(), name text not null, email text, phone text, address text, nif text, created_at timestamptz default now() );
+create index if not exists clients_name_idx on clients (lower(name));
+create table if not exists products( id uuid primary key default gen_random_uuid(), name text not null, sku text unique, unit text, price numeric(12,2) default 0, created_at timestamptz default now() );
+create index if not exists products_name_idx on products (lower(name));
+create table if not exists entries( id uuid primary key default gen_random_uuid(), client_id uuid references clients(id) on delete set null, product_id uuid references products(id) on delete set null, qty_received integer default 0, qty_delivered integer default 0, status text not null default 'pending' check (status in ('pending','partial','delivered')), note text, created_at timestamptz default now() );
+create index if not exists entries_client_idx on entries (client_id);
+create table if not exists deliveries( id uuid primary key default gen_random_uuid(), entry_id uuid references entries(id) on delete cascade, qty integer not null, delivered_at timestamptz default now() );
+create table if not exists documents( id uuid primary key default gen_random_uuid(), client_id uuid references clients(id) on delete set null, code text unique, date date default current_date, subtotal numeric(12,2) default 0, vat numeric(12,2) default 0, total numeric(12,2) default 0, created_at timestamptz default now() );
+create table if not exists companies( id uuid primary key default gen_random_uuid(), name text not null, email text, phone text, address text, logo_url text, created_at timestamptz default now() );

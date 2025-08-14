@@ -1,82 +1,9 @@
-import { sql } from '@vercel/postgres';
-import { verifyAuth } from './lib/auth';
-
-export const runtime = 'edge';
-
-const jsonResponse = (data: any, status: number = 200) => new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-});
-
-export default async function POST(req: Request) {
-    const authResult = await verifyAuth(req);
-    if (authResult.error) {
-        return authResult.error;
-    }
-
-    try {
-        const { action, payload } = await req.json();
-
-        switch (action) {
-            case 'create': {
-                const { code, date, clientId, whoInput, status, items } = payload;
-                const { rows } = await sql`
-                    INSERT INTO entries (code, date, client_id, who_input, status, items)
-                    VALUES (${code}, ${date}, ${clientId}, ${whoInput}, ${status}, ${JSON.stringify(items)})
-                    RETURNING *;
-                `;
-                return jsonResponse(rows[0]);
-            }
-            case 'update': {
-                const { id, ...updates } = payload;
-                if (!id) {
-                    return jsonResponse({ message: 'Entry ID is required for update' }, 400);
-                }
-
-                const { rows: existingRows } = await sql`SELECT * FROM entries WHERE id = ${id};`;
-                if (existingRows.length === 0) {
-                    return jsonResponse({ message: 'Entry not found' }, 404);
-                }
-                const existingEntry = existingRows[0];
-
-                const updatedCode = 'code' in updates ? updates.code : existingEntry.code;
-                const updatedDate = 'date' in updates ? updates.date : existingEntry.date;
-                const updatedClientId = 'clientId' in updates ? updates.clientId : existingEntry.client_id;
-                const updatedWhoInput = 'whoInput' in updates ? updates.whoInput : existingEntry.who_input;
-                const updatedStatus = 'status' in updates ? updates.status : existingEntry.status;
-                const updatedItems = 'items' in updates ? JSON.stringify(updates.items) : JSON.stringify(existingEntry.items);
-                let updatedInvoiceId = 'invoiceId' in updates ? updates.invoiceId : existingEntry.invoice_id;
-
-                if (updatedInvoiceId === undefined) {
-                    updatedInvoiceId = null;
-                }
-
-                const { rows } = await sql`
-                    UPDATE entries
-                    SET 
-                        code = ${updatedCode},
-                        date = ${updatedDate},
-                        client_id = ${updatedClientId},
-                        who_input = ${updatedWhoInput},
-                        status = ${updatedStatus},
-                        items = ${updatedItems},
-                        invoice_id = ${updatedInvoiceId}
-                    WHERE id = ${id}
-                    RETURNING *;
-                `;
-                
-                return jsonResponse(rows[0]);
-            }
-            case 'delete': {
-                const { id } = payload;
-                await sql`DELETE FROM entries WHERE id = ${id};`;
-                return jsonResponse({ message: 'Entry deleted successfully' });
-            }
-            default:
-                return jsonResponse({ message: `Unknown action: ${action}` }, 400);
-        }
-    } catch (error: any) {
-        console.error('API Error in entries.ts:', error);
-        return jsonResponse({ message: error.message }, 500);
-    }
-}
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { sql } from './_lib/db.js';
+async function ensure(){ await sql`create table if not exists entries( id uuid primary key default gen_random_uuid(), client_id uuid references clients(id) on delete set null, product_id uuid references products(id) on delete set null, qty_received integer default 0, qty_delivered integer default 0, status text not null default 'pending' check (status in ('pending','partial','delivered')), note text, created_at timestamptz default now() );`; await sql`create index if not exists entries_client_idx on entries (client_id);`; }
+export default async function handler(req: VercelRequest, res: VercelResponse){ await ensure(); const {method, query}=req;
+  if(method==='GET'){ if(query.id){ const r:any[] = await sql`select * from entries where id=${String(query.id)} limit 1;`; return res.status(200).json(r[0]??null);} const rows:any[] = await sql`select * from entries order by created_at desc limit 500;`; return res.status(200).json(rows); }
+  if(method==='POST'){ const b=(req.body??{}) as any; const r:any[] = await sql`insert into entries(client_id,product_id,qty_received,qty_delivered,status,note) values (${b.client_id??null}, ${b.product_id??null}, ${b.qty_received??0}, ${b.qty_delivered??0}, ${b.status??'pending'}, ${b.note??null}) returning *;`; return res.status(201).json(r[0]); }
+  if(method==='PUT'){ const b=(req.body??{}) as any; if(!b.id) return res.status(400).json({message:'missing id'}); const r:any[] = await sql`update entries set client_id=${b.client_id??null}, product_id=${b.product_id??null}, qty_received=${b.qty_received??0}, qty_delivered=${b.qty_delivered??0}, status=${b.status??'pending'}, note=${b.note??null} where id=${b.id} returning *;`; return res.status(200).json(r[0]); }
+  if(method==='DELETE'){ const id=String((req.query.id ?? (req.body as any)?.id) ?? ''); if(!id) return res.status(400).json({message:'missing id'}); await sql`delete from entries where id=${id}`; return res.status(200).json({ok:true}); }
+  return res.status(405).end(); }

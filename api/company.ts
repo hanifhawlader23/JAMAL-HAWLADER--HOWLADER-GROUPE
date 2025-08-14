@@ -1,48 +1,7 @@
-import { sql } from '@vercel/postgres';
-import { verifyAuth } from './lib/auth';
-import { Role } from '../../types';
-
-export const runtime = 'edge';
-
-const jsonResponse = (data: any, status: number = 200) => new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-});
-
-
-export default async function POST(req: Request) {
-    const authResult = await verifyAuth(req, [Role.ADMIN]);
-    if (authResult.error) {
-        return authResult.error;
-    }
-
-    try {
-        const { action, payload } = await req.json();
-
-        switch (action) {
-            case 'update': {
-                const { name, address, phone, email, vatNumber, logoUrl } = payload;
-                 const { rows } = await sql`
-                    UPDATE company_details
-                    SET name = ${name}, address = ${address}, phone = ${phone}, email = ${email}, vat_number = ${vatNumber}, logo_url = ${logoUrl}
-                    WHERE id = 1
-                    RETURNING *;
-                `;
-                // Handle case where company_details might not exist yet
-                if (rows.length === 0) {
-                    const { rows: newRows } = await sql`
-                        INSERT INTO company_details (id, name, address, phone, email, vat_number, logo_url)
-                        VALUES (1, ${name}, ${address}, ${phone}, ${email}, ${vatNumber}, ${logoUrl})
-                        RETURNING *;
-                    `;
-                    return jsonResponse(newRows[0]);
-                }
-                return jsonResponse(rows[0]);
-            }
-            default:
-                return jsonResponse({ message: `Unknown action: ${action}` }, 400);
-        }
-    } catch (error: any) {
-        return jsonResponse({ message: error.message }, 500);
-    }
-}
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { sql } from './_lib/db.js';
+async function ensure(){ await sql`create table if not exists companies( id uuid primary key default gen_random_uuid(), name text not null, email text, phone text, address text, logo_url text, created_at timestamptz default now() );`; }
+export default async function handler(req: VercelRequest, res: VercelResponse){ await ensure(); const {method}=req;
+  if(method==='GET'){ const rows:any[] = await sql`select * from companies order by created_at desc limit 1;`; return res.status(200).json(rows[0]??null); }
+  if(method==='POST' || method==='PUT'){ const b=(req.body??{}) as any; const rows:any[] = await sql`insert into companies(name,email,phone,address,logo_url) values (${b.name}, ${b.email??null}, ${b.phone??null}, ${b.address??null}, ${b.logo_url??null}) returning *;`; if(rows.length) return res.status(200).json(rows[0]); }
+  return res.status(405).end(); }
