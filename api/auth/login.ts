@@ -1,56 +1,27 @@
-
-
-import { neon } from '@neondatabase/serverless';
-const sql = neon(process.env.DATABASE_URL!);
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { serialize } from 'cookie';
-
-export const runtime = 'edge';
-
-export default async function POST(req: Request) {
+import { sql } from '../_lib/db.js';
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') return res.status(405).end();
+  const body = (req.body ?? {}) as any;
+  const userEmail = String(body.email ?? body.username ?? '').toLowerCase();
+  const password  = String(body.password ?? '');
+  if (!userEmail || !password) return res.status(400).json({ error: 'missing_fields' });
   try {
-    const { username, password } = await req.json();
-
-    if (!username || !password) {
-      return new Response(JSON.stringify({ message: 'Username and password are required' }), { status: 400 });
-    }
-
-    const { rows } = await sql`SELECT * FROM users WHERE username = ${username.toLowerCase()}`;
-    const user = rows[0];
-
-    if (!user) {
-      return new Response(JSON.stringify({ message: 'Invalid email or password.' }), { status: 401 });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return new Response(JSON.stringify({ message: 'Invalid email or password.' }), { status: 401 });
-    }
-
-    const token = jwt.sign(
-      { userId: user.id, role: user.role },
-      process.env.JWT_SECRET as string,
-      { expiresIn: '7d' }
-    );
-
-    const cookie = serialize('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV !== 'development',
-      sameSite: 'strict',
-      maxAge: 60 * 60 * 24 * 7, // 1 week
-      path: '/',
-    });
-
-    const { password: _, ...userWithoutPassword } = user;
-
-    return new Response(JSON.stringify({ user: userWithoutPassword }), {
-      status: 200,
-      headers: { 'Set-Cookie': cookie },
-    });
-
-  } catch (error: any) {
-    console.error(error);
-    return new Response(JSON.stringify({ message: 'Internal Server Error' }), { status: 500 });
+    const rows: any[] = await sql`
+      select id, email, role
+      from users
+      where lower(email)=lower(${userEmail})
+        and is_active=true
+        and password_hash = crypt(${password}, password_hash)
+      limit 1;`;
+    if (!rows.length) return res.status(401).json({ error:'invalid_credentials' });
+    res.setHeader('Set-Cookie', [
+      serialize('session_email', String(rows[0].email), { httpOnly:true, secure:true, sameSite:'strict', path:'/', maxAge:60*60*24*7 }),
+      serialize('session_role',  String(rows[0].role),  { httpOnly:true, secure:true, sameSite:'strict', path:'/', maxAge:60*60*24*7 }),
+    ]);
+    return res.status(200).json({ ok:true, role: rows[0].role });
+  } catch (e) {
+    return res.status(500).json({ ok:false, error:String(e) });
   }
 }

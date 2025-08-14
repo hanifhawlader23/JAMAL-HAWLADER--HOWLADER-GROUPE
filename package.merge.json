@@ -1,0 +1,10 @@
+{
+  "type": "module",
+  "engines": {
+    "node": "18.x"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.9.3",
+    "cookie": "^0.6.0"
+  }
+}

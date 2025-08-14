@@ -1,38 +1,11 @@
-import { neon } from '@neondatabase/serverless';
-const sql = neon(process.env.DATABASE_URL!);
-
-export const runtime = 'edge'; // This can run on the edge as it's a simple query
-
-const jsonResponse = (data: any, status: number = 200) => new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-});
-
-export default async function GET(request: Request) {
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { sql } from './_lib/db.js';
+export default async function handler(_req: VercelRequest, res: VercelResponse) {
   try {
-    // Explicitly check for the database connection URL to provide a better error message.
-    if (!process.env.DATABASE_URL) {
-      return jsonResponse(
-        { 
-          ok: false, 
-          error: "Database connection string is not configured.",
-          message: "Please set the POSTGRES_URL environment variable in your Vercel project settings."
-        },
-        500
-      );
-    }
-    
-    const result = await sql`SELECT NOW() as now;`;
-    return jsonResponse({ ok: true, now: result.rows[0].now }, 200);
-  } catch (error: any) {
-    console.error("Health check failed:", error);
-    return jsonResponse(
-      { 
-        ok: false, 
-        error: "Database connection failed.",
-        message: error.message 
-      }, 
-      500
-    );
+    const rows: any[] = await sql`select now() as now`;
+    const now = Array.isArray(rows) && rows.length ? rows[0].now : null;
+    return res.status(200).json({ ok: true, now });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: String(e) });
   }
 }
