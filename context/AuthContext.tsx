@@ -4,7 +4,7 @@ import React, { createContext, useState, ReactNode, useCallback, useEffect } fro
 import { User, Role } from '../types';
 import { useToast } from '../hooks/useToast';
 import { AppLoadingScreen } from '../components/AppLoadingScreen';
-import { findUserByEmail, createUser, validateCredentials } from '../api/setup-simple';
+import { findUserByEmail, createUser, validateCredentials } from '../lib/simpleAuth';
 
 interface AuthContextType {
   currentUser: User | null;
