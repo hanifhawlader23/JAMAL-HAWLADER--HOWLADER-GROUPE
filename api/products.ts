@@ -1,4 +1,5 @@
-import { sql } from '@vercel/postgres';
+import { neon } from '@neondatabase/serverless';
+const sql = neon(process.env.DATABASE_URL!);
 import { verifyAuth } from './lib/auth.ts';
 import { Role } from '../../types.ts';
 

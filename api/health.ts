@@ -1,4 +1,5 @@
-import { sql } from '@vercel/postgres';
+import { neon } from '@neondatabase/serverless';
+const sql = neon(process.env.DATABASE_URL!);
 
 export const runtime = 'edge'; // This can run on the edge as it's a simple query
 
@@ -10,7 +11,7 @@ const jsonResponse = (data: any, status: number = 200) => new Response(JSON.stri
 export default async function GET(request: Request) {
   try {
     // Explicitly check for the database connection URL to provide a better error message.
-    if (!process.env.POSTGRES_URL) {
+    if (!process.env.DATABASE_URL) {
       return jsonResponse(
         { 
           ok: false, 

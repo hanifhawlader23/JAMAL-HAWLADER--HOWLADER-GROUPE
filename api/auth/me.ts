@@ -1,6 +1,7 @@
 
 
-import { sql } from '@vercel/postgres';
+import { neon } from '@neondatabase/serverless';
+const sql = neon(process.env.DATABASE_URL!);
 import jwt from 'jsonwebtoken';
 import { parse } from 'cookie';
 
