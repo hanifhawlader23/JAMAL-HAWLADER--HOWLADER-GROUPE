@@ -1,5 +1,10 @@
 
 {
+  "functions": {
+    "api/setup.ts": {
+      "maxDuration": 60
+    }
+  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/((?!api/|assets/).*)", "destination": "/index.html" }

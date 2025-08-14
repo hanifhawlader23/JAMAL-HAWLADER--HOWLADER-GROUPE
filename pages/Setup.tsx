@@ -12,12 +12,27 @@ const Setup = () => {
         setResult(null);
         try {
             const res = await fetch('/api/setup');
-            const data = await res.json();
-            if (res.ok) {
-                setResult({ success: true, message: data.message || 'Setup completed successfully!' });
-            } else {
-                throw new Error(data.error || 'Setup failed.');
+            // Get response as text first to avoid JSON parse error on timeout pages
+            const text = await res.text();
+
+            if (!res.ok) {
+                // Attempt to parse as JSON error, otherwise use text
+                try {
+                    const errorData = JSON.parse(text);
+                    throw new Error(errorData.error || errorData.message || 'Setup failed with an unknown server error.');
+                } catch (e) {
+                    // This catches parsing errors, meaning the response was not JSON (e.g., a Vercel error page)
+                    if (text.toLowerCase().includes('gateway_timeout') || text.toLowerCase().includes('timed out')) {
+                         throw new Error('The setup process timed out. This is common on the first run. Please try again in a moment.');
+                    }
+                    throw new Error('A server error occurred. Please check the function logs on Vercel for details.');
+                }
             }
+            
+            // If response is OK, parse the success message
+            const data = JSON.parse(text);
+            setResult({ success: true, message: data.message || 'Setup completed successfully!' });
+
         } catch (error: any) {
             setResult({ success: false, message: error.message });
         } finally {
