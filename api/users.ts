@@ -1,8 +1,7 @@
-import { neon } from '@neondatabase/serverless';
-const sql = neon(process.env.DATABASE_URL!);
+import { sql } from '@vercel/postgres';
 import bcrypt from 'bcryptjs';
-import { Role } from '../../types.ts';
-import { verifyAuth } from './lib/auth.ts';
+import { Role } from '../../types';
+import { verifyAuth } from './lib/auth';
 
 export const runtime = 'edge';
 

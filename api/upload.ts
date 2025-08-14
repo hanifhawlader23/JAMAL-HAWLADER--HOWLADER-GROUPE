@@ -1,5 +1,5 @@
 import { put } from '@vercel/blob';
-import { verifyAuth } from './lib/auth.ts';
+import { verifyAuth } from './lib/auth';
 
 export const runtime = 'edge';
 
