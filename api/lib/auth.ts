@@ -1,7 +1,8 @@
 
+
 import { parse } from 'cookie';
 import jwt from 'jsonwebtoken';
-import { Role } from '../../types';
+import { Role } from '../../types.ts';
 
 export interface AuthPayload {
   userId: string;

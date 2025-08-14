@@ -1,8 +1,10 @@
 import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { Role } from '../../types';
-import { verifyAuth } from './lib/auth.js';
+import { Role } from '../../types.ts';
+import { verifyAuth } from './lib/auth.ts';
+
+export const runtime = 'edge';
 
 export default async function POST(req: Request) {
     const authResult = await verifyAuth(req, [Role.ADMIN]);

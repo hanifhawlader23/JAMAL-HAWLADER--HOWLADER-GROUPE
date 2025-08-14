@@ -1,6 +1,6 @@
 import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
-import { verifyAuth } from './lib/auth.js';
+import { verifyAuth } from './lib/auth.ts';
 
 export const runtime = 'edge';
 

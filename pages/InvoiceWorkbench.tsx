@@ -2,6 +2,11 @@
 
 
 
+
+
+
+
+
 import React, { useState, useMemo, useRef } from 'react';
 import { useData } from '../hooks/useData';
 import { EntryStatus, PaymentStatus, DocumentItem, Surcharge, Document, DeliveryItem, Entry } from '../types';
@@ -130,13 +135,13 @@ const InvoiceWorkbench = () => {
                 
                  // Check for surcharges but DON'T change the unit price
                 if (isSpecialClient && deliveredQty > 0 && deliveredQty <= 20) {
-                    specialClientSurchargeBase += itemTotal;
+                    specialClientSurchargeBase += Number(itemTotal);
                 }
                 
                 // Apply dynamic surcharge, avoiding double-charging
                 if (thresholdNum > 0 && percentNum > 0 && deliveredQty > 0 && deliveredQty <= thresholdNum) {
                      if (!isSpecialClient || !(deliveredQty > 0 && deliveredQty <= 20)) {
-                        dynamicSurchargeBase += itemTotal;
+                        dynamicSurchargeBase += Number(itemTotal);
                      }
                 }
 
@@ -177,8 +182,8 @@ const InvoiceWorkbench = () => {
         }
 
 
-        const subtotal = docItems.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
-        const totalSurcharges = surcharges.reduce((sum, s) => sum + s.amount, 0);
+        const subtotal = docItems.reduce((sum: number, item: DocumentItem) => sum + (Number(item.total) || 0), 0);
+        const totalSurcharges = surcharges.reduce((sum, s) => sum + Number(s.amount || 0), 0);
         const taxRate = 21.00; // Example tax rate
         const taxAmount = (subtotal + totalSurcharges) * (taxRate / 100);
         const total = subtotal + totalSurcharges + taxAmount;

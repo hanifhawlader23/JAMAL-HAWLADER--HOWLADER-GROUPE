@@ -1,4 +1,5 @@
 
+
 import React, { createContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { User, Role } from '../types';
 import { useToast } from '../hooks/useToast';
@@ -88,7 +89,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { success: false, message: data.message || 'Signup failed.' };
       }
     } catch (error) {
-        return { success: false, message: 'Failed to create account.' };
+        return { success: false, message: 'Could not create account. Please check your connection and try again.' };
     }
   };
 

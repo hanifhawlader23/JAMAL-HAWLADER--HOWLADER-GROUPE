@@ -1,9 +1,12 @@
 
+
 import { sql } from '@vercel/postgres';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { serialize } from 'cookie';
-import { Role } from '../../types';
+import { Role } from '../../types.ts';
+
+export const runtime = 'edge';
 
 export default async function POST(req: Request) {
   try {

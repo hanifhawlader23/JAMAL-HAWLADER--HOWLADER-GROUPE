@@ -119,12 +119,14 @@ export default async function GET(request: Request) {
       );
     `;
     
-    // Seed initial data if tables are empty
+    // Seed initial admin users
     const hashedPassword = await bcrypt.hash('password', 10);
     await sql`
       INSERT INTO users (username, password, role, full_name)
-      SELECT 'admin@example.com', ${hashedPassword}, 'admin', 'Admin User'
-      WHERE NOT EXISTS (SELECT 1 FROM users);
+      VALUES 
+        ('admin@hawlader.eu', ${hashedPassword}, 'admin', 'Admin Hawlader'),
+        ('hanif@hawlader.eu', ${hashedPassword}, 'admin', 'Hanif Hawlader')
+      ON CONFLICT (username) DO NOTHING;
     `;
 
     await sql`
@@ -133,7 +135,7 @@ export default async function GET(request: Request) {
       WHERE NOT EXISTS (SELECT 1 FROM company_details);
     `;
 
-    result = { message: "Database tables created and seeded successfully." };
+    result = { message: "Database tables created and seeded with admin users successfully." };
     return NextResponse.json(result, { status: 200 });
 
   } catch (error: any) {

@@ -5,6 +5,8 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { serialize } from 'cookie';
 
+export const runtime = 'edge';
+
 export default async function POST(req: Request) {
   try {
     const { username, password } = await req.json();

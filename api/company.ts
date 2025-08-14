@@ -1,7 +1,7 @@
 import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
-import { verifyAuth } from './lib/auth.js';
-import { Role } from '../../types';
+import { verifyAuth } from './lib/auth.ts';
+import { Role } from '../../types.ts';
 
 export const runtime = 'edge';
 
