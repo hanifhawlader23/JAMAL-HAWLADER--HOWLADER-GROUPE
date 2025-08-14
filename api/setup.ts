@@ -1,6 +1,8 @@
 import { sql } from '@vercel/postgres';
 import bcrypt from 'bcryptjs';
 
+export const runtime = 'edge';
+
 export default async function GET(request: Request) {
   // Explicitly check for the database connection URL to prevent crashes.
   if (!process.env.POSTGRES_URL) {
