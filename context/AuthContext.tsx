@@ -4,6 +4,7 @@ import React, { createContext, useState, ReactNode, useCallback, useEffect } fro
 import { User, Role } from '../types';
 import { useToast } from '../hooks/useToast';
 import { AppLoadingScreen } from '../components/AppLoadingScreen';
+import { findUserByEmail, createUser, validateCredentials } from '../api/setup-simple';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -30,38 +31,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { addToast } = useToast();
 
   useEffect(() => {
-    const verifyUser = async () => {
-      try {
-        const res = await fetch('/api/auth/me');
-        if (res.ok) {
-          const user = await res.json();
-          setCurrentUser(user);
-        } else {
-          setCurrentUser(null);
-        }
-      } catch (error) {
-        console.error("Failed to verify user session:", error);
-        setCurrentUser(null);
-      } finally {
-        setAuthLoading(false);
+    // Check localStorage for saved user session
+    try {
+      const savedUser = localStorage.getItem('currentUser');
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        setCurrentUser(user);
       }
-    };
-    verifyUser();
+    } catch (error) {
+      console.error("Failed to restore user session:", error);
+    }
   }, []);
 
   const login = async (username: string, password: string): Promise<{ success: boolean; message: string; }> => {
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setCurrentUser(data.user);
+      const user = validateCredentials(username, password);
+      if (user) {
+        const authUser = {
+          id: user.id,
+          username: user.email,
+          role: user.role as Role,
+          fullName: user.name
+        };
+        setCurrentUser(authUser);
+        localStorage.setItem('currentUser', JSON.stringify(authUser));
         return { success: true, message: 'Login successful!' };
       } else {
-        return { success: false, message: data.message || 'Login failed.' };
+        return { success: false, message: 'Invalid email or password.' };
       }
     } catch (error) {
       return { success: false, message: 'An error occurred during login.' };
@@ -69,25 +65,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
   
   const logout = useCallback(async () => {
+    localStorage.removeItem('currentUser');
     await fetch('/api/auth/logout', { method: 'POST' });
     setCurrentUser(null);
-    setViewAsRole(null);
   }, []);
 
   const signup = async (fullName: string, username: string, password: string): Promise<{ success: boolean; message: string; }> => {
     try {
-      const res = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName, username, password }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setCurrentUser(data.user);
-        return { success: true, message: 'Signup successful!' };
-      } else {
-        return { success: false, message: data.message || 'Signup failed.' };
+      // Check if user already exists
+      if (findUserByEmail(username)) {
+        return { success: false, message: 'An account with this email already exists.' };
       }
+      
+      const user = createUser(username, password, fullName);
+      const authUser = {
+        id: user.id,
+        username: user.email,
+        role: user.role as Role,
+        fullName: user.name
+      };
+      setCurrentUser(authUser);
+      localStorage.setItem('currentUser', JSON.stringify(authUser));
+      return { success: true, message: 'Account created successfully!' };
     } catch (error) {
         return { success: false, message: 'Could not create account. Please check your connection and try again.' };
     }

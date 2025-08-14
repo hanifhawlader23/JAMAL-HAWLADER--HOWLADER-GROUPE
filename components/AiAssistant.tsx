@@ -59,48 +59,35 @@ const AiAssistant = () => {
         setInput('');
         setIsLoading(true);
 
+        // Mock AI response for demo
+        const mockResponses = [
+            "Based on the data I can see, your textile business is performing well with multiple active clients and a good mix of product categories.",
+            "I notice you have entries from AUSTRAL SPORT S.A. which appears to be a key client. The delivery status looks good overall.",
+            "Your product catalog includes various categories like T-Shirts, Hoodies, Jeans, and Dresses with competitive pricing.",
+            "The recent invoices show healthy revenue flow. Would you like me to analyze any specific aspect of your business?",
+            "I can help you analyze client performance, product sales trends, or delivery efficiency. What specific insights are you looking for?"
+        ];
+        
+        const randomResponse = mockResponses[Math.floor(Math.random() * mockResponses.length)];
         try {
-            const dataContext = summarizeDataForAI();
-            
-            const response = await fetch('/api/ai', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    prompt: userMessage.content,
-                    dataContext: dataContext,
-                }),
-            });
-
-            if (!response.ok || !response.body) {
-                const errorData = await response.json().catch(() => ({error: 'API request failed'}));
-                throw new Error(errorData.error || `Request failed with status ${response.status}`);
-            }
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
+            // Simulate AI response with typing effect
             let currentAiMessage = { role: 'model', content: '' };
-            
-            // Add a placeholder for the AI response
             setChatHistory(prev => [...prev, currentAiMessage]);
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                const chunkText = decoder.decode(value, { stream: true });
-                currentAiMessage.content += chunkText;
-                
-                // Update the last message in the history with the new content
+            
+            // Simulate typing effect
+            for (let i = 0; i <= randomResponse.length; i++) {
+                currentAiMessage.content = randomResponse.slice(0, i);
                 setChatHistory(prev => {
                     const newHistory = [...prev];
                     newHistory[newHistory.length - 1] = { ...currentAiMessage };
                     return newHistory;
                 });
+                await new Promise(resolve => setTimeout(resolve, 30));
             }
 
         } catch (error: any) {
             console.error("AI Assistant Error:", error);
-            const errorMessage = { role: 'model', content: `Sorry, I encountered an error: ${error.message}` };
+            const errorMessage = { role: 'model', content: `I'm currently running in demo mode. The AI features will be available when connected to a backend service.` };
             setChatHistory(prev => {
                  const newHistory = [...prev];
                  // Replace the placeholder if it exists, otherwise add new error message

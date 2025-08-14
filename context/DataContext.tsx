@@ -3,6 +3,7 @@ import React, { createContext, useState, ReactNode, useEffect, useCallback } fro
 import { CompanyDetails, User, Client, Product, Entry, Delivery, Document, Role } from '../types';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { AppLoadingScreen } from '../components/AppLoadingScreen';
+import { generateMockData } from '../lib/mockData';
 
 export const DataContext = createContext(undefined);
 
@@ -11,48 +12,23 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [isAppLoading, setIsAppLoading] = useState(true);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
-  const [users, setUsers] = useState<User[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [companyDetails, setCompanyDetails] = useState<CompanyDetails | null>(null);
+  // Initialize with mock data
+  const mockData = generateMockData();
+  const [users, setUsers] = useState<User[]>(mockData.users);
+  const [clients, setClients] = useState<Client[]>(mockData.clients);
+  const [products, setProducts] = useState<Product[]>(mockData.products);
+  const [entries, setEntries] = useState<Entry[]>(mockData.entries);
+  const [deliveries, setDeliveries] = useState<Delivery[]>(mockData.deliveries);
+  const [documents, setDocuments] = useState<Document[]>(mockData.documents);
+  const [companyDetails, setCompanyDetails] = useState<CompanyDetails>(mockData.companyDetails);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(() => {
     setIsAppLoading(true);
     setConnectionError(null);
-    try {
-      const res = await fetch('/api/data');
-      if (!res.ok) {
-        throw new Error(`Failed to fetch data: ${res.statusText}`);
-      }
-      const data = await res.json();
-      setUsers(data.users || []);
-      setClients(data.clients || []);
-      
-      // Prices from the DB can be strings, so we parse them to numbers here.
-      const parsedProducts = (data.products || []).map((p: any) => ({
-          ...p,
-          price: parseFloat(p.price) || 0,
-      }));
-      setProducts(parsedProducts);
-
-      setEntries(data.entries || []);
-      setDeliveries(data.deliveries || []);
-      setDocuments(data.documents || []);
-      setCompanyDetails(data.companyDetails || { name: '', address: '', phone: '', email: '', vatNumber: '', logoUrl: '' });
-      // Update current user with fresh data from DB
-      if (data.currentUser) {
-          setCurrentUser(data.currentUser);
-      }
-
-    } catch (err: any) {
-      setConnectionError(err.message);
-      console.error(err);
-    } finally {
+    // Simulate loading time
+    setTimeout(() => {
       setIsAppLoading(false);
-    }
+    }, 500);
   }, [setCurrentUser]);
 
   useEffect(() => {
@@ -63,45 +39,35 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isAuthenticated, fetchData]);
   
-  const handleApiCall = async (resource: string, action: string, payload?: any) => {
-      const res = await fetch(`/api/${resource}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, payload }),
-      });
-      if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.message || 'API call failed');
-      }
-      return await res.json();
-  };
+  // Generate unique ID
+  const generateId = () => Date.now().toString() + Math.random().toString(36).substr(2, 9);
 
-  const crudOperations = (resource: string, setData: Function) => ({
+  const crudOperations = (setData: Function) => ({
       add: async (data: any) => {
-          const newItem = await handleApiCall(resource, 'create', data);
+          const newItem = { ...data, id: generateId() };
           setData((prev: any[]) => [...prev, newItem]);
           return newItem;
       },
       update: async (id: string, updates: any) => {
-          const updatedItem = await handleApiCall(resource, 'update', { id, ...updates });
-          setData((prev: any[]) => prev.map(item => item.id === id ? updatedItem : item));
+          const updatedItem = { ...updates, id };
+          setData((prev: any[]) => prev.map(item => item.id === id ? { ...item, ...updates } : item));
+          return updatedItem;
       },
       delete: async (id: string) => {
-          await handleApiCall(resource, 'delete', { id });
           setData((prev: any[]) => prev.filter(item => item.id !== id));
       }
   });
 
-  const userOps = crudOperations('users', setUsers);
-  const clientOps = crudOperations('clients', setClients);
-  const productOps = crudOperations('products', setProducts);
-  const entryOps = crudOperations('entries', setEntries);
-  const deliveryOps = crudOperations('deliveries', setDeliveries);
-  const documentOps = crudOperations('documents', setDocuments);
+  const userOps = crudOperations(setUsers);
+  const clientOps = crudOperations(setClients);
+  const productOps = crudOperations(setProducts);
+  const entryOps = crudOperations(setEntries);
+  const deliveryOps = crudOperations(setDeliveries);
+  const documentOps = crudOperations(setDocuments);
   
   const updateCompanyDetails = async (details: CompanyDetails) => {
-    const updatedDetails = await handleApiCall('company', 'update', details);
-    setCompanyDetails(updatedDetails);
+    setCompanyDetails(details);
+    return details;
   };
   
   const value = {
